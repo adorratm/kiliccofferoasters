@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -34,6 +35,8 @@ import {
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @InjectEntityManager() private readonly em: EntityManager,
     private readonly notifications: NotificationsService,
@@ -290,6 +293,20 @@ export class OrdersService {
     const saved = await this.em.save(order);
 
     if (previous !== dto.status) {
+      try {
+        await this.inventory.maybeRestoreOnStatusChange(
+          saved.id,
+          previous,
+          dto.status,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Stock restore on status change failed for ${saved.id}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+
       const template =
         dto.status === OrderStatus.PAID ? 'order_paid' : 'order_status';
       await this.notifications.enqueueOrderStatus(

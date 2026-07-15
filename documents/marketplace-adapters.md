@@ -80,7 +80,17 @@ Sipariş sync sırasında (credentials ile veya mock):
 1. `marketplace_orders` kaydı oluşturulur/güncellenir  
 2. `MarketplaceOrderImportService` otomatik olarak iç `Order` + `OrderItem` + `Payment` oluşturur  
 3. `internal_order_id` bağlanır; ürün eşlemesi listing `externalListingId` / SKU / barcode üzerinden yapılır  
-4. Aktif siparişlerde yerel stok düşülür  
+4. Aktif siparişlerde yerel stok düşülür (`orders.stock_decremented = true`)  
+5. Pazaryeri iptal/iade sync’inde veya admin durum `cancelled` / `refunded` yapınca stok iade edilir (bayrak false)  
+
+Mevcut aktif siparişler için (kolon eklendikten sonra bir kez):
+
+```sql
+UPDATE orders SET stock_decremented = true
+WHERE status IN ('paid','processing','shipped','delivered');
+```
+
+Production: migration `AddOrderStockDecremented` bunu da yapar.
 
 Sipariş numarası örneği: `KLC-TY-20260716-0001` (TY / HB / N11).
 

@@ -270,10 +270,28 @@ export class MarketplaceOrderImportService {
   private async syncStatus(mOrder: MarketplaceOrder): Promise<void> {
     if (!mOrder.internalOrder) return;
     const next = mapExternalStatus(mOrder.externalStatus);
-    if (mOrder.internalOrder.status === next) return;
-    // İptal → refunded geçişlerinde stok iadesi şimdilik yok
+    const previous = mOrder.internalOrder.status;
+    if (previous === next) return;
     mOrder.internalOrder.status = next;
     await this.em.save(mOrder.internalOrder);
+    try {
+      const restored = await this.inventory.maybeRestoreOnStatusChange(
+        mOrder.internalOrder.id,
+        previous,
+        next,
+      );
+      if (restored) {
+        this.logger.log(
+          `Stock restored after marketplace status ${previous}→${next} (${mOrder.externalOrderId})`,
+        );
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Marketplace stock restore failed for ${mOrder.externalOrderId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
   }
 
   private parsePayload(

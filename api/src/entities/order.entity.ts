@@ -95,6 +95,13 @@ export class Order extends BaseEntity {
   @Column({ name: 'source_cart_id', type: 'uuid', nullable: true })
   sourceCartId!: string | null;
 
+  /**
+   * Stok bu sipariş için düşüldüyse true.
+   * İptal/iadede iade edilince false olur — çift düşme/iadeyi engeller.
+   */
+  @Column({ name: 'stock_decremented', type: 'boolean', default: false })
+  stockDecremented!: boolean;
+
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items!: OrderItem[];
 
