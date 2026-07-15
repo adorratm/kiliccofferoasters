@@ -5,13 +5,20 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { StatsCard } from '@/components/StatsCard';
 import { Reveal, Stagger } from '@/components/Reveal';
-import { asArray } from '@/lib/utils';
+import { asArray, asPaged, formatMoney } from '@/lib/utils';
 import type {
   DashboardStats,
   MarketplaceAccount,
   Order,
   Product,
 } from '@/lib/types';
+
+const REVENUE_STATUSES = new Set([
+  'paid',
+  'processing',
+  'shipped',
+  'delivered',
+]);
 
 function isToday(iso?: string): boolean {
   if (!iso) return false;
@@ -77,20 +84,25 @@ export default function DashboardPage() {
         }
 
         const [ordersRes, productsRes, marketRes] = await Promise.allSettled([
-          api<unknown>('/orders/admin/all'),
-          api<unknown>('/products/admin/all'),
+          api<unknown>('/orders/admin/all?limit=100'),
+          api<unknown>('/products/admin/all?limit=100&includeInactive=true'),
           api<unknown>('/marketplace/accounts'),
         ]);
 
         if (cancelled) return;
 
         if (ordersRes.status === 'fulfilled') {
-          const orders = asArray<Order>(ordersRes.value);
-          setOrdersToday(orders.filter((o) => isToday(o.createdAt)).length);
+          const orders = asPaged<Order>(ordersRes.value, 100).items;
+          const todayOrders = orders.filter((o) => isToday(o.createdAt));
+          setOrdersToday(todayOrders.length);
+          const revenue = todayOrders
+            .filter((o) => REVENUE_STATUSES.has(o.status))
+            .reduce((sum, o) => sum + Number(o.total || 0), 0);
+          setRevenueToday(formatMoney(revenue, 'TRY'));
         }
 
         if (productsRes.status === 'fulfilled') {
-          const products = asArray<Product>(productsRes.value);
+          const products = asPaged<Product>(productsRes.value, 100).items;
           setLowStock(products.filter((p) => Number(p.stock) <= 10).length);
         }
 

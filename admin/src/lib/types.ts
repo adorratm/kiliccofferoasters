@@ -7,6 +7,14 @@ export type ProductVariant = {
   isActive?: boolean;
 };
 
+export type Category = {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  isActive?: boolean;
+};
+
 export type Product = {
   id: string;
   slug: string;

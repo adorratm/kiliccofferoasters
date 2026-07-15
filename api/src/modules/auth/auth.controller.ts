@@ -9,8 +9,9 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { ConfigService } from '@nestjs/config';
+import * as passport from 'passport';
 import { AuthService } from '@modules/auth/auth.service';
 import { LoginDto, RegisterDto } from '@modules/auth/dto/auth.dto';
 import { Public } from '@common/decorators/public.decorator';
@@ -72,10 +73,32 @@ export class AuthController {
 
   @Public()
   @Get('google/admin/callback')
-  @UseGuards(AuthGuard('google-admin'))
   @ApiOperation({ summary: 'Admin Google OAuth callback' })
   googleAdminCallback(@Req() req: Request, @Res() res: Response) {
-    return this.redirectWithToken(req.user as User, res, 'admin');
+    const adminBase = (
+      this.config.get<string>('adminUrl') || 'http://localhost:3001'
+    ).replace(/\/$/, '');
+
+    return passport.authenticate(
+      'google-admin',
+      (
+        err: Error | null,
+        user: User | false,
+        info: { message?: string } | undefined,
+      ) => {
+        if (err || !user) {
+          const raw =
+            err?.message || info?.message || 'Admin girişi reddedildi';
+          const message = /allowlist/i.test(raw)
+            ? 'Bu e-posta admin allowlist’te değil'
+            : raw;
+          return res.redirect(
+            `${adminBase}/login?error=${encodeURIComponent(message)}`,
+          );
+        }
+        return this.redirectWithToken(user, res, 'admin');
+      },
+    )(req, res, (() => undefined) as NextFunction);
   }
 
   @Public()

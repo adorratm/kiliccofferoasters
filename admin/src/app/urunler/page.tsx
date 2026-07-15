@@ -2,13 +2,13 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { asPaged, formatMoney, slugify } from '@/lib/utils';
+import { asArray, asPaged, formatMoney, slugify } from '@/lib/utils';
 import { DataTable } from '@/components/DataTable';
 import { MediaUpload } from '@/components/MediaUpload';
 import { GalleryMediaField } from '@/components/GalleryMediaField';
 import { Checkbox } from '@/components/Checkbox';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import type { Product, ProductVariant } from '@/lib/types';
+import type { Category, Product, ProductVariant } from '@/lib/types';
 
 type VariantForm = {
   id?: string;
@@ -37,6 +37,7 @@ type FormState = {
   flavorNotes: string;
   imageUrl: string;
   gallery: string;
+  categoryId: string;
   isActive: boolean;
   isFeatured: boolean;
   variants: VariantForm[];
@@ -67,6 +68,7 @@ const emptyForm = (): FormState => ({
   flavorNotes: '',
   imageUrl: '',
   gallery: '',
+  categoryId: '',
   isActive: true,
   isFeatured: false,
   variants: [emptyVariant()],
@@ -74,6 +76,7 @@ const emptyForm = (): FormState => ({
 
 export default function ProductsPage() {
   const [rows, setRows] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -104,11 +107,15 @@ export default function ProductsPage() {
         includeInactive: 'true',
       });
       if (q.trim()) params.set('q', q.trim());
-      const data = await api<unknown>(`/products/admin/all?${params}`);
+      const [data, cats] = await Promise.all([
+        api<unknown>(`/products/admin/all?${params}`),
+        api<unknown>('/categories/admin/all').catch(() => []),
+      ]);
       const paged = asPaged<Product>(data, limit);
       setRows(paged.items);
       setTotal(paged.total);
       setTotalPages(paged.totalPages);
+      setCategories(asArray<Category>(cats));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ürünler yüklenemedi');
       setRows([]);
@@ -121,6 +128,11 @@ export default function ProductsPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, sort, order]);
+
+  function categoryName(categoryId?: string | null) {
+    if (!categoryId) return '—';
+    return categories.find((c) => c.id === categoryId)?.name || '—';
+  }
 
   function startCreate() {
     setForm(emptyForm());
@@ -157,6 +169,7 @@ export default function ProductsPage() {
       flavorNotes: (p.flavorNotes || []).join(', '),
       imageUrl: p.imageUrl || '',
       gallery: (p.gallery || []).join('\n'),
+      categoryId: p.categoryId || '',
       isActive: p.isActive,
       isFeatured: Boolean(p.isFeatured),
       variants,
@@ -201,6 +214,7 @@ export default function ProductsPage() {
         .split('\n')
         .map((u) => u.trim())
         .filter(Boolean),
+      categoryId: form.categoryId || null,
       isActive: form.isActive,
       isFeatured: form.isFeatured,
       variants,
@@ -361,6 +375,25 @@ export default function ProductsPage() {
               }
               className="mt-1 w-full border border-border-muted bg-background px-3 py-2"
             />
+          </label>
+          <label className="block text-sm">
+            <span className="mono text-[10px] uppercase text-muted">
+              Kategori
+            </span>
+            <select
+              value={form.categoryId}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, categoryId: e.target.value }))
+              }
+              className="mt-1 w-full border border-border-muted bg-background px-3 py-2"
+            >
+              <option value="">— Kategori yok —</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="block text-sm">
             <span className="mono text-[10px] uppercase text-muted">Stok</span>
@@ -615,6 +648,15 @@ export default function ProductsPage() {
                 <div className="font-medium">{r.name}</div>
                 <div className="mono text-[10px] text-muted">{r.slug}</div>
               </div>
+            ),
+          },
+          {
+            key: 'category',
+            header: 'Kategori',
+            render: (r) => (
+              <span className="text-xs text-muted">
+                {categoryName(r.categoryId)}
+              </span>
             ),
           },
           {

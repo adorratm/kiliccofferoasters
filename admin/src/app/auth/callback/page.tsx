@@ -10,6 +10,19 @@ function CallbackInner() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const oauthError = params.get('error');
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError));
+      const t = setTimeout(
+        () =>
+          router.replace(
+            `/login?error=${encodeURIComponent(oauthError)}`,
+          ),
+        1500,
+      );
+      return () => clearTimeout(t);
+    }
+
     const token =
       params.get('token') ||
       params.get('access_token') ||
