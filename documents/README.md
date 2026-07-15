@@ -11,5 +11,6 @@
 | [shipping-adapters.md](shipping-adapters.md) | 7 kargo firması |
 | [marketplace-adapters.md](marketplace-adapters.md) | Trendyol / HB / N11 |
 | [legal-pages.md](legal-pages.md) | Sözleşmeler ve çerez |
+| [smoke-checklist.md](smoke-checklist.md) | Canlı öncesi smoke kontrol listesi |
 | [docker.md](docker.md) | Docker Compose notları |
 | [env-variables.md](env-variables.md) | Ortam değişkenleri |

@@ -57,3 +57,7 @@ yarn dev:admin
 ## Alias kontrolü
 
 Yeni dosyalarda `from '../...'` kullanmayın. IDE path mapping: her paketin kendi `tsconfig.json` dosyasında tanımlıdır.
+
+## Smoke
+
+Özellikleri hızlı doğrulamak için: [smoke-checklist.md](smoke-checklist.md).
