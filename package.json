@@ -18,6 +18,11 @@
     "migration:generate": "yarn workspace @kilic/api migration:generate",
     "lint": "yarn workspaces foreach -Apt run lint"
   },
+  "resolutions": {
+    "qs": "^6.15.3",
+    "uuid": "^14.0.1",
+    "postcss": "^8.5.19"
+  },
   "volta": {
     "node": "26.5.0",
     "yarn": "4.17.1"
