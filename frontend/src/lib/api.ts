@@ -62,8 +62,17 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
       ...rest,
       headers,
       body: json !== undefined ? JSON.stringify(json) : rest.body,
-      cache: rest.cache ?? "default",
-      next: rest.next ?? { revalidate: 300 },
+      // Mutasyon ve sepet isteklerinde bayat cache kullanma
+      cache:
+        rest.cache ??
+        (json !== undefined || (rest.method && rest.method !== "GET")
+          ? "no-store"
+          : "default"),
+      next:
+        rest.next ??
+        (json !== undefined || (rest.method && rest.method !== "GET")
+          ? { revalidate: 0 }
+          : { revalidate: 300 }),
     });
 
   if (!res.ok) {
@@ -214,7 +223,7 @@ export async function createReview(
 }
 
 export async function getCart(sessionId: string, token?: string | null) {
-  return apiFetch<Cart>("/cart", { sessionId, token });
+  return apiFetch<Cart>("/cart", { sessionId, token, cache: "no-store" });
 }
 
 export async function addCartItem(
@@ -359,6 +368,19 @@ export async function checkout(
     sessionId,
     token,
     json: payload,
+  });
+}
+
+export async function retryPayment(
+  orderId: string,
+  email?: string,
+  token?: string | null,
+) {
+  return apiFetch<PaymentInitResponse>("/payments/retry", {
+    method: "POST",
+    token,
+    json: { orderId, email: email || undefined },
+    cache: "no-store",
   });
 }
 

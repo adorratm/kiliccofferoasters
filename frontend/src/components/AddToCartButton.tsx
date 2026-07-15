@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ApiError } from "@/lib/api";
 import { cartAddItem } from "@/lib/cart";
 
 type Props = {
@@ -34,8 +35,12 @@ export function AddToCartButton({
         quantity: 1,
       });
       router.push("/sepet");
-    } catch {
-      setError("Sepete eklenemedi. API bağlantısını kontrol edin.");
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Sepete eklenemedi. API bağlantısını kontrol edin.",
+      );
     } finally {
       setLoading(false);
     }

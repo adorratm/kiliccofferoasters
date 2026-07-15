@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { OrderStatusStepper } from "@/components/OrderStatusStepper";
 import { Reveal } from "@/components/Reveal";
 import { StatusBadge } from "@/components/StatusBadge";
-import { getOrderById } from "@/lib/api";
+import { ApiError, getOrderById, retryPayment } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { formatMoney } from "@/lib/format";
 import { orderStatusHint, shipmentStatusLabel } from "@/lib/order-status";
@@ -18,6 +18,8 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -68,6 +70,31 @@ export default function OrderDetailPage() {
     }
   }
 
+  async function onRetryPay() {
+    const token = getToken();
+    if (!token || !order) return;
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const result = await retryPayment(
+        order.id,
+        order.customerEmail,
+        token,
+      );
+      if (result.paymentPageUrl) {
+        window.location.href = result.paymentPageUrl;
+        return;
+      }
+      setRetryError("Ödeme yönlendirmesi alınamadı.");
+    } catch (err) {
+      setRetryError(
+        err instanceof ApiError ? err.message : "Yeniden ödeme başarısız",
+      );
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   return (
     <div className="page-shell py-16 md:py-24">
       <div className="page-enter">
@@ -101,6 +128,23 @@ export default function OrderDetailPage() {
           <p className="mt-4 max-w-2xl font-meta text-xs uppercase leading-relaxed text-secondary">
             {hint}
           </p>
+        ) : null}
+        {order.status === "pending_payment" ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={retrying}
+              onClick={() => void onRetryPay()}
+              className="btn-cta px-6 py-3 text-xs disabled:opacity-50"
+            >
+              {retrying ? "Yönlendiriliyor…" : "Ödemeyi tamamla"}
+            </button>
+            {retryError ? (
+              <p className="font-meta text-[11px] uppercase text-error">
+                {retryError}
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </Reveal>
 

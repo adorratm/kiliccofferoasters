@@ -17,6 +17,7 @@ export type TrackUpdatePayload = {
   trackingUrl?: string | null;
   events?: Array<{ at: string; description: string; location?: string }>;
   order?: {
+    id?: string;
     orderNumber: string;
     status: string;
     customerName: string;

@@ -231,6 +231,24 @@ export default function CheckoutPage() {
         getToken(),
       );
 
+      if (result.orderId) {
+        try {
+          sessionStorage.setItem("kilic_last_order_id", result.orderId);
+          sessionStorage.setItem(
+            "kilic_last_order_email",
+            form.customerEmail.trim(),
+          );
+          if (result.orderNumber) {
+            sessionStorage.setItem(
+              "kilic_last_order_number",
+              result.orderNumber,
+            );
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+
       if (result.paymentPageUrl) {
         window.location.href = result.paymentPageUrl;
         return;

@@ -8,7 +8,14 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/hesabim", "/sepet", "/odeme", "/auth/", "/giris", "/kayit"],
+      disallow: [
+        "/hesabim",
+        "/sepet",
+        "/odeme",
+        "/auth/",
+        "/giris",
+        "/kayit",
+      ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

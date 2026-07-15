@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,9 +10,11 @@ import { EntityManager } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Order, OrderStatus } from '@entities/order.entity';
 import { Payment, PaymentStatus } from '@entities/payment.entity';
+import { User, UserRole } from '@entities/user.entity';
 import {
   InitializePaymentDto,
   PaymentCallbackDto,
+  RetryPaymentDto,
 } from '@modules/payments/dto/payments.dto';
 import { NotificationsService } from '@modules/notifications/notifications.service';
 import { statusLabel } from '@modules/notifications/notification.templates';
@@ -43,6 +46,35 @@ export class IyzicoService {
     }
   }
 
+  async retryCheckout(dto: RetryPaymentDto, user?: User | null) {
+    const order = await this.em.findOne(Order, {
+      where: { id: dto.orderId },
+      relations: { payment: true },
+    });
+    if (!order) {
+      throw new NotFoundException('Sipariş bulunamadı');
+    }
+    if (order.status !== OrderStatus.PENDING_PAYMENT) {
+      throw new BadRequestException(
+        'Bu sipariş için yeniden ödeme başlatılamaz',
+      );
+    }
+
+    const isAdmin = user?.role === UserRole.ADMIN;
+    const isOwner = Boolean(user && order.userId && order.userId === user.id);
+    const email = dto.email?.toLowerCase().trim();
+    const emailMatch =
+      Boolean(email) && order.customerEmail.toLowerCase() === email;
+
+    if (!isAdmin && !isOwner && !emailMatch) {
+      throw new ForbiddenException(
+        'Yeniden ödeme için giriş yapın veya sipariş e-postasını doğrulayın',
+      );
+    }
+
+    return this.initializeCheckout({ orderId: order.id });
+  }
+
   async initializeCheckout(dto: InitializePaymentDto) {
     const order = await this.em.findOne(Order, {
       where: { id: dto.orderId },
@@ -50,6 +82,13 @@ export class IyzicoService {
     });
     if (!order) {
       throw new NotFoundException('Sipariş bulunamadı');
+    }
+    if (
+      order.status !== OrderStatus.PENDING_PAYMENT &&
+      order.payment?.status !== PaymentStatus.PENDING &&
+      order.payment?.status !== PaymentStatus.FAILED
+    ) {
+      throw new BadRequestException('Sipariş ödeme için uygun değil');
     }
     if (!order.payment) {
       throw new BadRequestException('Siparişe bağlı ödeme kaydı yok');
@@ -240,6 +279,7 @@ export class IyzicoService {
       success,
       paymentStatus: payment.status,
       orderId: payment.orderId,
+      orderNumber: payment.order?.orderNumber ?? null,
       orderStatus: payment.order?.status,
     };
   }

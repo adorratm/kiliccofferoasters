@@ -22,6 +22,7 @@ export class Cart extends BaseEntity {
   @Column({ name: 'abandoned_reminder_at', type: 'timestamptz', nullable: true })
   abandonedReminderAt!: Date | null;
 
-  @OneToMany(() => CartItem, (item) => item.cart, { cascade: true })
+  /** cascade verme: boş items ile save kalemleri silebilir */
+  @OneToMany(() => CartItem, (item) => item.cart)
   items!: CartItem[];
 }

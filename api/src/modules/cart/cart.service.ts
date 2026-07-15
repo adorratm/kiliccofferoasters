@@ -168,8 +168,8 @@ export class CartService {
 
   /** Abandoned cart cron için güncel aktivite zamanı */
   private async touchCart(cart: Cart) {
-    cart.abandonedReminderAt = null;
-    await this.em.save(cart);
+    // Relation collection'ı kaydetme — boş items + eski cascade kalemleri siliyordu
+    await this.em.update(Cart, cart.id, { abandonedReminderAt: null });
   }
 
   private withTotals(cart: Cart) {

@@ -33,3 +33,16 @@ export class PaymentCallbackDto {
   @IsString()
   status?: string;
 }
+
+export class RetryPaymentDto {
+  @ApiProperty()
+  @IsUUID()
+  orderId!: string;
+
+  @ApiPropertyOptional({
+    description: 'Misafir siparişlerinde doğrulama için e-posta',
+  })
+  @IsOptional()
+  @IsString()
+  email?: string;
+}
