@@ -46,6 +46,8 @@ export type OrderStatus =
 export type OrderItem = {
   id: string;
   productName: string;
+  variantLabel?: string | null;
+  grindLabel?: string | null;
   quantity: number;
   unitPrice: string | number;
   lineTotal: string | number;
@@ -59,6 +61,15 @@ export type Shipment = {
   trackingUrl?: string | null;
 };
 
+export type OrderPayment = {
+  id?: string;
+  provider?: string;
+  status?: string;
+  amount?: string | number;
+  currency?: string;
+  paymentId?: string | null;
+};
+
 export type Order = {
   id: string;
   orderNumber: string;
@@ -67,13 +78,18 @@ export type Order = {
   customerName: string;
   customerPhone: string;
   shippingAddress?: Record<string, string>;
+  billingAddress?: Record<string, string> | null;
   subtotal: string | number;
   shippingFee?: string | number;
+  discountAmount?: string | number;
+  couponCode?: string | null;
   taxAmount?: string | number;
   total: string | number;
   currency?: string;
   shippingProvider?: string | null;
   notes?: string | null;
+  legalAcceptances?: Record<string, unknown> | null;
+  payment?: OrderPayment | null;
   items?: OrderItem[];
   shipments?: Shipment[];
   createdAt?: string;

@@ -3,6 +3,11 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import {
+  ORDER_STATUS_LABELS,
+  formatAddress,
+  resolveOrderSource,
+} from '@/lib/order-display';
 import { asArray, formatMoney } from '@/lib/utils';
 import type { Order, OrderStatus, ShippingProviderConfig } from '@/lib/types';
 
@@ -68,6 +73,7 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function updateStatus(e: FormEvent) {
@@ -139,6 +145,11 @@ export default function OrderDetailPage() {
     );
   }
 
+  const source = resolveOrderSource(order);
+  const addressLines = formatAddress(order.shippingAddress);
+  const currency = order.currency || 'TRY';
+  const discount = Number(order.discountAmount || 0);
+
   return (
     <div className="space-y-6">
       <button
@@ -160,29 +171,103 @@ export default function OrderDetailPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="border border-border-muted bg-surface p-4 space-y-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
           <p className="mono text-[10px] uppercase text-muted">Sipariş</p>
           <h2 className="text-xl font-semibold mono">{order.orderNumber}</h2>
-          <p className="text-sm">
-            {order.customerName} · {order.customerEmail} · {order.customerPhone}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="mono border border-border-muted px-2 py-0.5 text-[10px] uppercase text-accent">
+              {ORDER_STATUS_LABELS[order.status] || order.status}
+            </span>
+            <span
+              className={`mono border px-2 py-0.5 text-[10px] uppercase ${
+                source.kind === 'web'
+                  ? 'border-border-muted text-muted'
+                  : 'border-accent/40 text-accent'
+              }`}
+            >
+              {source.label}
+            </span>
+          </div>
+        </div>
+        {order.createdAt ? (
+          <p className="text-xs text-muted">
+            {new Date(order.createdAt).toLocaleString('tr-TR')}
           </p>
-          <p className="text-sm text-muted">
-            Toplam: {formatMoney(order.total, order.currency || 'TRY')}
-          </p>
-          {order.shippingAddress ? (
-            <pre className="mt-2 overflow-auto bg-background p-2 text-xs text-muted">
-              {JSON.stringify(order.shippingAddress, null, 2)}
-            </pre>
+        ) : null}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="border border-border-muted bg-surface p-4 space-y-3">
+          <p className="mono text-[10px] uppercase text-muted">Müşteri</p>
+          <p className="text-sm font-medium">{order.customerName}</p>
+          <p className="text-sm text-muted">{order.customerEmail}</p>
+          <p className="text-sm text-muted">{order.customerPhone}</p>
+          {addressLines.length ? (
+            <div className="mt-2 border-t border-border-muted pt-3 text-sm text-muted">
+              <p className="mono mb-1 text-[10px] uppercase">Teslimat</p>
+              {addressLines.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          ) : null}
+          {order.notes ? (
+            <p className="mt-2 border-t border-border-muted pt-3 text-xs text-muted">
+              {order.notes}
+            </p>
           ) : null}
         </div>
 
         <div className="space-y-4">
+          <div className="border border-border-muted bg-surface p-4 space-y-2 text-sm">
+            <p className="mono text-[10px] uppercase text-muted">Özet</p>
+            <div className="flex justify-between">
+              <span className="text-muted">Ara toplam</span>
+              <span>{formatMoney(order.subtotal, currency)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">Kargo</span>
+              <span>{formatMoney(order.shippingFee || 0, currency)}</span>
+            </div>
+            {discount > 0 ? (
+              <div className="flex justify-between text-accent">
+                <span>
+                  İndirim
+                  {order.couponCode ? ` (${order.couponCode})` : ''}
+                </span>
+                <span>−{formatMoney(discount, currency)}</span>
+              </div>
+            ) : null}
+            {Number(order.taxAmount || 0) > 0 ? (
+              <div className="flex justify-between">
+                <span className="text-muted">Vergi</span>
+                <span>{formatMoney(order.taxAmount || 0, currency)}</span>
+              </div>
+            ) : null}
+            <div className="flex justify-between border-t border-border-muted pt-2 font-medium">
+              <span>Toplam</span>
+              <span>{formatMoney(order.total, currency)}</span>
+            </div>
+            {order.payment ? (
+              <div className="mt-3 border-t border-border-muted pt-3 text-xs text-muted">
+                <p className="mono uppercase text-accent">
+                  Ödeme · {order.payment.provider || '—'} ·{' '}
+                  {order.payment.status || '—'}
+                </p>
+                {order.payment.paymentId ? (
+                  <p className="mono mt-1">ID: {order.payment.paymentId}</p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
           <form
             onSubmit={updateStatus}
             className="border border-border-muted bg-surface p-4 space-y-3"
           >
-            <p className="mono text-[10px] uppercase text-muted">Durum güncelle</p>
+            <p className="mono text-[10px] uppercase text-muted">
+              Durum güncelle
+            </p>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as OrderStatus)}
@@ -190,7 +275,7 @@ export default function OrderDetailPage() {
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {ORDER_STATUS_LABELS[s] || s}
                 </option>
               ))}
             </select>
@@ -203,36 +288,42 @@ export default function OrderDetailPage() {
             </button>
           </form>
 
-          <form
-            onSubmit={createShipment}
-            className="border border-border-muted bg-surface p-4 space-y-3"
-          >
-            <p className="mono text-[10px] uppercase text-muted">
-              Kargo oluştur
+          {source.kind === 'web' ? (
+            <form
+              onSubmit={createShipment}
+              className="border border-border-muted bg-surface p-4 space-y-3"
+            >
+              <p className="mono text-[10px] uppercase text-muted">
+                Kargo oluştur
+              </p>
+              <select
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                className="w-full border border-border-muted bg-background px-3 py-2 text-sm"
+              >
+                {providers.length === 0 ? (
+                  <option value="">Aktif sağlayıcı yok</option>
+                ) : (
+                  providers.map((p) => (
+                    <option key={p.id} value={p.provider}>
+                      {p.displayName} ({p.provider})
+                    </option>
+                  ))
+                )}
+              </select>
+              <button
+                type="submit"
+                disabled={shipping || !provider}
+                className="border border-accent px-4 py-2 text-sm text-accent hover:bg-accent hover:text-white disabled:opacity-50"
+              >
+                {shipping ? 'Oluşturuluyor…' : 'Kargo oluştur'}
+              </button>
+            </form>
+          ) : (
+            <p className="border border-border-muted bg-surface px-4 py-3 text-xs text-muted">
+              Pazaryeri siparişi — kargo platform panelinden yönetilir.
             </p>
-            <select
-              value={provider}
-              onChange={(e) => setProvider(e.target.value)}
-              className="w-full border border-border-muted bg-background px-3 py-2 text-sm"
-            >
-              {providers.length === 0 ? (
-                <option value="">Aktif sağlayıcı yok</option>
-              ) : (
-                providers.map((p) => (
-                  <option key={p.id} value={p.provider}>
-                    {p.displayName} ({p.provider})
-                  </option>
-                ))
-              )}
-            </select>
-            <button
-              type="submit"
-              disabled={shipping || !provider}
-              className="border border-accent px-4 py-2 text-sm text-accent hover:bg-accent hover:text-white disabled:opacity-50"
-            >
-              {shipping ? 'Oluşturuluyor…' : 'Kargo oluştur'}
-            </button>
-          </form>
+          )}
         </div>
       </div>
 
@@ -250,11 +341,20 @@ export default function OrderDetailPage() {
                   key={item.id}
                   className="flex justify-between gap-4 px-4 py-3 text-sm"
                 >
-                  <span>
-                    {item.productName} × {item.quantity}
-                  </span>
+                  <div>
+                    <p>
+                      {item.productName} × {item.quantity}
+                    </p>
+                    {(item.variantLabel || item.grindLabel) && (
+                      <p className="text-xs text-muted">
+                        {[item.variantLabel, item.grindLabel]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    )}
+                  </div>
                   <span className="mono">
-                    {formatMoney(item.lineTotal, order.currency || 'TRY')}
+                    {formatMoney(item.lineTotal, currency)}
                   </span>
                 </li>
               ))}
@@ -278,9 +378,20 @@ export default function OrderDetailPage() {
                   <span className="mx-2 text-muted">·</span>
                   <span className="mono text-xs text-accent">{s.status}</span>
                   {s.trackingNumber ? (
-                    <span className="ml-2 mono text-xs text-muted">
-                      {s.trackingNumber}
-                    </span>
+                    s.trackingUrl ? (
+                      <a
+                        href={s.trackingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-2 mono text-xs text-accent underline"
+                      >
+                        {s.trackingNumber}
+                      </a>
+                    ) : (
+                      <span className="ml-2 mono text-xs text-muted">
+                        {s.trackingNumber}
+                      </span>
+                    )
                   ) : null}
                 </li>
               ))}

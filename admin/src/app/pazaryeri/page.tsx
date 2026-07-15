@@ -761,7 +761,15 @@ export default function MarketplacePage() {
                               : ''}
                           </p>
                         ) : (
-                          <p className="mt-1 text-muted">İçe aktarılmadı</p>
+                          <p className="mt-1 text-muted">
+                            İçe aktarılmadı ·{' '}
+                            <a
+                              className="underline"
+                              href={`/siparisler?q=${encodeURIComponent(o.externalOrderId)}`}
+                            >
+                              siparişlerde ara
+                            </a>
+                          </p>
                         )}
                       </li>
                     ))}

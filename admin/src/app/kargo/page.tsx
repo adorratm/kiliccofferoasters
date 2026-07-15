@@ -54,11 +54,11 @@ export default function ShippingPage() {
     void load();
   }, []);
 
-  async function save(e: FormEvent, id: string) {
+  async function save(e: FormEvent, row: ShippingProviderConfig) {
     e.preventDefault();
-    const draft = drafts[id];
+    const draft = drafts[row.id];
     if (!draft) return;
-    setSavingId(id);
+    setSavingId(row.id);
     setMessage(null);
     setError(null);
     let credentials: Record<string, string>;
@@ -70,7 +70,8 @@ export default function ShippingPage() {
       return;
     }
     try {
-      await api(`/shipping/providers/${id}`, {
+      // API :provider kodu bekler (UUID değil)
+      await api(`/shipping/providers/${encodeURIComponent(row.provider)}`, {
         method: 'PATCH',
         body: {
           isEnabled: draft.isEnabled,
@@ -123,7 +124,7 @@ export default function ShippingPage() {
             return (
               <form
                 key={row.id}
-                onSubmit={(e) => void save(e, row.id)}
+                onSubmit={(e) => void save(e, row)}
                 className="border border-border-muted bg-surface p-4 space-y-3"
               >
                 <div className="flex items-start justify-between gap-3">
