@@ -77,4 +77,18 @@ export default () => ({
   bullBoard: {
     path: process.env.BULL_BOARD_PATH || '/admin/queues',
   },
+  tax: {
+    /** Türkiye B2C için varsayılan KDV % */
+    ratePercent: parseFloat(process.env.TAX_RATE_PERCENT || '20'),
+    /** true: fiyatlar KDV dahil; taxAmount içinden ayrıştırılır */
+    included: process.env.TAX_INCLUDED !== 'false',
+  },
+  shipping: {
+    freeOver: parseFloat(process.env.FREE_SHIPPING_OVER || '0'),
+    defaultFee: parseFloat(process.env.DEFAULT_SHIPPING_FEE || '89.90'),
+  },
+  abandonedCart: {
+    /** Sepet güncellenmeden kaç saat sonra hatırlatma (varsayılan 4) */
+    hours: parseInt(process.env.ABANDONED_CART_HOURS || '4', 10),
+  },
 });

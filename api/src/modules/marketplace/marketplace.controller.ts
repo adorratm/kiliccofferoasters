@@ -63,4 +63,16 @@ export class MarketplaceController {
   ) {
     return this.marketplaceService.pushProduct(id, dto);
   }
+
+  @Get('accounts/:id/listings')
+  @ApiOperation({ summary: 'Admin: hesap listingleri' })
+  listListings(@Param('id') id: string) {
+    return this.marketplaceService.listListings(id);
+  }
+
+  @Get('accounts/:id/orders')
+  @ApiOperation({ summary: 'Admin: pazaryeri siparişleri' })
+  listOrders(@Param('id') id: string) {
+    return this.marketplaceService.listOrders(id);
+  }
 }

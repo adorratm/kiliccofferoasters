@@ -12,12 +12,14 @@ const NAV = [
   { href: '/site-ayarlari', label: 'Site Ayarları', code: '06' },
   { href: '/medya', label: 'Medya', code: '07' },
   { href: '/siparisler', label: 'Siparişler', code: '08' },
-  { href: '/kargo', label: 'Kargo', code: '09' },
-  { href: '/pazaryeri', label: 'Pazaryeri', code: '10' },
-  { href: '/sozlesmeler', label: 'Sözleşmeler', code: '11' },
-  { href: '/mesajlar', label: 'Mesajlar', code: '12' },
-  { href: '/bulten', label: 'Bülten', code: '13' },
-  { href: '/kuyruklar', label: 'Kuyruklar', code: '14' },
+  { href: '/kuponlar', label: 'Kuponlar', code: '09' },
+  { href: '/yorumlar', label: 'Yorumlar', code: '10' },
+  { href: '/kargo', label: 'Kargo', code: '11' },
+  { href: '/pazaryeri', label: 'Pazaryeri', code: '12' },
+  { href: '/sozlesmeler', label: 'Sözleşmeler', code: '13' },
+  { href: '/mesajlar', label: 'Mesajlar', code: '14' },
+  { href: '/bulten', label: 'Bülten', code: '15' },
+  { href: '/kuyruklar', label: 'Kuyruklar', code: '16' },
 ];
 
 export function AdminSidebar() {

@@ -67,6 +67,12 @@ export class Order extends BaseEntity {
   @Column({ name: 'shipping_fee', type: 'decimal', precision: 12, scale: 2, default: 0 })
   shippingFee!: string;
 
+  @Column({ name: 'discount_amount', type: 'decimal', precision: 12, scale: 2, default: 0 })
+  discountAmount!: string;
+
+  @Column({ name: 'coupon_code', type: 'varchar', length: 40, nullable: true })
+  couponCode!: string | null;
+
   @Column({ name: 'tax_amount', type: 'decimal', precision: 12, scale: 2, default: 0 })
   taxAmount!: string;
 

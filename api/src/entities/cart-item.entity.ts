@@ -27,6 +27,10 @@ export class CartItem extends BaseEntity {
   @Column({ name: 'variant_id', type: 'uuid', nullable: true })
   variantId!: string | null;
 
+  /** whole_bean | filter | espresso | turkish */
+  @Column({ name: 'grind_option', type: 'varchar', length: 40, nullable: true })
+  grindOption!: string | null;
+
   @Column({ type: 'int', default: 1 })
   quantity!: number;
 

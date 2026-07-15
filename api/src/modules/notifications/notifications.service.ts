@@ -78,7 +78,39 @@ export class NotificationsService {
     });
   }
 
+  async enqueueAbandonedCart(input: {
+    cartId: string;
+    email: string;
+    name?: string | null;
+    itemCount: number;
+  }) {
+    const payload: NotificationJobPayload = {
+      cartId: input.cartId,
+      template: 'abandoned_cart',
+      channels: ['email'],
+      recipientEmail: input.email,
+      recipientName: input.name || undefined,
+      context: { itemCount: input.itemCount },
+    };
+    await this.notifyQueue.add('abandoned_cart', payload, {
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 5000 },
+      removeOnComplete: 50,
+      removeOnFail: 100,
+    });
+  }
+
   async processJob(payload: NotificationJobPayload): Promise<void> {
+    if (payload.template === 'abandoned_cart') {
+      await this.processAbandonedCart(payload);
+      return;
+    }
+
+    if (!payload.orderId) {
+      this.logger.warn('Notification missing orderId');
+      return;
+    }
+
     const order = await this.em.findOne(Order, {
       where: { id: payload.orderId },
     });
@@ -203,5 +235,53 @@ export class NotificationsService {
       order: { createdAt: 'DESC' },
       take: 50,
     });
+  }
+
+  private async processAbandonedCart(
+    payload: NotificationJobPayload,
+  ): Promise<void> {
+    const email = payload.recipientEmail;
+    if (!email) {
+      this.logger.warn('Abandoned cart notification missing email');
+      return;
+    }
+    const frontendUrl = resolveFrontendUrl(this.config);
+    const name = payload.recipientName || 'Kahve sever';
+    const itemCount =
+      typeof payload.context?.itemCount === 'number'
+        ? payload.context.itemCount
+        : 1;
+    const cartUrl = `${frontendUrl}/sepet`;
+
+    const log = this.em.create(NotificationLog, {
+      channel: NotificationChannel.EMAIL,
+      recipient: email,
+      template: 'abandoned_cart',
+      orderId: null,
+      shipmentId: null,
+      status: NotificationStatus.PENDING,
+      payload: { cartId: payload.cartId, itemCount },
+    });
+    await this.em.save(log);
+
+    try {
+      const subject = 'Sepetinizde kahve sizi bekliyor';
+      const html = `<p>Merhaba ${name},</p><p>Sepetinizde <strong>${itemCount}</strong> ürün kaldı. Siparişinizi tamamlayın — taze kavrumlar tükenmeden.</p><p><a href="${cartUrl}">Sepete dön</a></p><p style="color:#888;font-size:12px;margin-top:24px">Kılıç Coffee Roasters · Torbalı / İzmir</p>`;
+      const text = `Merhaba ${name}, sepetinizde ${itemCount} ürün var: ${cartUrl}`;
+      const result = await this.email.send({
+        to: email,
+        subject,
+        html,
+        text,
+      });
+      log.status = NotificationStatus.SENT;
+      log.providerMessageId = result.id ?? null;
+      await this.em.save(log);
+    } catch (err) {
+      log.status = NotificationStatus.FAILED;
+      log.errorMessage = err instanceof Error ? err.message : String(err);
+      await this.em.save(log);
+      throw err;
+    }
   }
 }

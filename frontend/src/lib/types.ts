@@ -32,8 +32,29 @@ export type Product = {
   stock: number;
   isActive: boolean;
   isFeatured: boolean;
+  ratingAvg?: string;
+  ratingCount?: number;
   categoryId: string | null;
   variants?: ProductVariant[];
+};
+
+export type ProductReview = {
+  id: string;
+  productId: string;
+  userId: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  authorName: string;
+  isApproved: boolean;
+  isVerifiedPurchase: boolean;
+  createdAt?: string;
+};
+
+export type ProductReviewsResponse = Paginated<ProductReview> & {
+  productId: string;
+  ratingAvg: string;
+  ratingCount: number;
 };
 
 export type Paginated<T> = {
@@ -83,6 +104,7 @@ export type CartItem = {
   cartId: string;
   productId: string;
   variantId: string | null;
+  grindOption?: string | null;
   quantity: number;
   unitPrice: string;
   product?: Product;
@@ -127,6 +149,8 @@ export type OrderItem = {
   variantId: string | null;
   productName: string;
   variantLabel: string | null;
+  grindOption?: string | null;
+  grindLabel?: string | null;
   quantity: number;
   unitPrice: string;
   lineTotal: string;
@@ -143,6 +167,8 @@ export type Order = {
   billingAddress: Record<string, string> | null;
   subtotal: string;
   shippingFee: string;
+  discountAmount?: string;
+  couponCode?: string | null;
   taxAmount: string;
   total: string;
   currency: string;
@@ -193,7 +219,7 @@ export type TrackingResult = {
   provider?: string;
   trackingUrl?: string | null;
   events?: Array<{ at: string; description: string; location?: string }>;
-  order?: Pick<Order, "orderNumber" | "status" | "customerName">;
+  order?: Pick<Order, "id" | "orderNumber" | "status" | "customerName">;
 };
 
 export type LegalDocument = {
@@ -255,12 +281,31 @@ export type CheckoutPayload = {
     postalCode: string;
   };
   shippingProvider: string;
+  couponCode?: string;
   legalAcceptances: {
     mesafeliSatis: boolean;
     onBilgilendirme: boolean;
     kvkk: boolean;
   };
   notes?: string;
+};
+
+export type WishlistItem = {
+  id: string;
+  userId: string;
+  productId: string;
+  product?: Product;
+  createdAt?: string;
+};
+
+export type CouponPreview = {
+  valid: boolean;
+  code: string;
+  title: string | null;
+  type: "percent" | "fixed";
+  value: string;
+  discountAmount: string;
+  message?: string;
 };
 
 export type PaymentInitResponse = {

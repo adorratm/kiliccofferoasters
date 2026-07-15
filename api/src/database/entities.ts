@@ -23,6 +23,10 @@ import { SiteSetting } from '@entities/site-setting.entity';
 import { ContentSection } from '@entities/content-section.entity';
 import { NotificationLog } from '@entities/notification-log.entity';
 import { BlogPost } from '@entities/blog-post.entity';
+import { Coupon } from '@entities/coupon.entity';
+import { CouponRedemption } from '@entities/coupon-redemption.entity';
+import { ProductReview } from '@entities/product-review.entity';
+import { WishlistItem } from '@entities/wishlist-item.entity';
 
 export const ALL_ENTITIES = [
   User,
@@ -50,4 +54,8 @@ export const ALL_ENTITIES = [
   ContentSection,
   NotificationLog,
   BlogPost,
+  Coupon,
+  CouponRedemption,
+  ProductReview,
+  WishlistItem,
 ];

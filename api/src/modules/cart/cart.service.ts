@@ -97,27 +97,33 @@ export class CartService {
       variantId = variant.id;
     }
 
+    const grindOption = dto.grindOption ?? 'whole_bean';
+
     const existing = cart.items?.find(
       (i) =>
         i.productId === product.id &&
-        (i.variantId ?? null) === variantId,
+        (i.variantId ?? null) === variantId &&
+        (i.grindOption ?? 'whole_bean') === grindOption,
     );
 
     if (existing) {
       existing.quantity += dto.quantity;
       existing.unitPrice = unitPrice;
+      existing.grindOption = grindOption;
       await this.em.save(existing);
     } else {
       const item = this.em.create(CartItem, {
         cartId: cart.id,
         productId: product.id,
         variantId,
+        grindOption,
         quantity: dto.quantity,
         unitPrice,
       });
       await this.em.save(item);
     }
 
+    await this.touchCart(cart);
     return this.getCart(userId, sessionId);
   }
 
@@ -135,7 +141,11 @@ export class CartService {
       throw new NotFoundException('Sepet kalemi bulunamadı');
     }
     item.quantity = dto.quantity;
+    if (dto.grindOption !== undefined) {
+      item.grindOption = dto.grindOption;
+    }
     await this.em.save(item);
+    await this.touchCart(cart);
     return this.getCart(userId, sessionId);
   }
 
@@ -152,7 +162,14 @@ export class CartService {
       throw new NotFoundException('Sepet kalemi bulunamadı');
     }
     await this.em.remove(item);
+    await this.touchCart(cart);
     return this.getCart(userId, sessionId);
+  }
+
+  /** Abandoned cart cron için güncel aktivite zamanı */
+  private async touchCart(cart: Cart) {
+    cart.abandonedReminderAt = null;
+    await this.em.save(cart);
   }
 
   private withTotals(cart: Cart) {

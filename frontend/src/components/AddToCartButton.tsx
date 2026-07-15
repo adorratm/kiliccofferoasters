@@ -7,6 +7,7 @@ import { cartAddItem } from "@/lib/cart";
 type Props = {
   productId: string;
   variantId?: string | null;
+  grindOption?: string | null;
   label?: string;
   className?: string;
 };
@@ -14,6 +15,7 @@ type Props = {
 export function AddToCartButton({
   productId,
   variantId,
+  grindOption = "whole_bean",
   label = "Satın Almayı Başlat",
   className,
 }: Props) {
@@ -25,7 +27,12 @@ export function AddToCartButton({
     setLoading(true);
     setError(null);
     try {
-      await cartAddItem({ productId, variantId, quantity: 1 });
+      await cartAddItem({
+        productId,
+        variantId,
+        grindOption,
+        quantity: 1,
+      });
       router.push("/sepet");
     } catch {
       setError("Sepete eklenemedi. API bağlantısını kontrol edin.");

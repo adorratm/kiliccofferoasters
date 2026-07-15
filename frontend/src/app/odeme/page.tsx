@@ -7,6 +7,7 @@ import {
   getMe,
   getMyAddresses,
   getShippingProviders,
+  validateCoupon,
 } from "@/lib/api";
 import { Reveal } from "@/components/Reveal";
 import { getToken } from "@/lib/auth";
@@ -16,7 +17,14 @@ import {
   getCartSessionId,
 } from "@/lib/cart";
 import { formatMoney } from "@/lib/format";
-import type { Address, Cart, ShippingProvider, User } from "@/lib/types";
+import { calculateOrderTotals } from "@/lib/pricing";
+import type {
+  Address,
+  Cart,
+  CouponPreview,
+  ShippingProvider,
+  User,
+} from "@/lib/types";
 
 type AddressFields = {
   city: string;
@@ -42,6 +50,12 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(
+    null,
+  );
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   const [shippingId, setShippingId] = useState<string>("");
   const [billingId, setBillingId] = useState<string>("");
@@ -206,6 +220,7 @@ export default function CheckoutPage() {
           shippingAddress,
           billingAddress,
           shippingProvider: form.shippingProvider,
+          couponCode: couponPreview?.valid ? couponPreview.code : undefined,
           legalAcceptances: {
             mesafeliSatis: form.mesafeliSatis,
             onBilgilendirme: form.onBilgilendirme,
@@ -247,7 +262,50 @@ export default function CheckoutPage() {
   const subtotal = cartSubtotal(cart);
   const selected = providers.find((p) => p.code === form.shippingProvider);
   const shippingFee = Number(selected?.fee || 0);
-  const total = subtotal + shippingFee;
+  const discountAmount = couponPreview?.valid
+    ? Number(couponPreview.discountAmount)
+    : 0;
+  const totals = calculateOrderTotals(subtotal, shippingFee, {
+    discountAmount,
+  });
+  const total = totals.total;
+
+  async function applyCoupon() {
+    setCouponError(null);
+    setCouponPreview(null);
+    const code = couponInput.trim();
+    if (!code) {
+      setCouponError("Kupon kodu girin");
+      return;
+    }
+    setCouponLoading(true);
+    try {
+      const preview = await validateCoupon(
+        code,
+        subtotal,
+        form.customerEmail || undefined,
+        getToken(),
+      );
+      if (!preview.valid) {
+        setCouponError(preview.message || "Geçersiz kupon");
+        return;
+      }
+      setCouponPreview(preview);
+      setCouponInput(preview.code);
+    } catch (err) {
+      setCouponError(
+        err instanceof Error ? err.message : "Kupon doğrulanamadı",
+      );
+    } finally {
+      setCouponLoading(false);
+    }
+  }
+
+  function clearCoupon() {
+    setCouponPreview(null);
+    setCouponError(null);
+    setCouponInput("");
+  }
 
   if (loading) {
     return (
@@ -544,9 +602,61 @@ export default function CheckoutPage() {
           <Reveal variant="right" delay={100}>
           <div className="sticky top-28 border border-outline-variant/30 bg-surface-container-low p-6 panel-motion">
             <h2 className="mb-6 font-display text-2xl">Özet</h2>
+            <div className="mb-6 space-y-2">
+              <label className="field-label">Kupon kodu</label>
+              <div className="flex gap-2">
+                <input
+                  value={couponInput}
+                  onChange={(e) =>
+                    setCouponInput(e.target.value.toUpperCase())
+                  }
+                  disabled={Boolean(couponPreview?.valid)}
+                  placeholder="HOSGELDIN10"
+                  className="field-input flex-1 uppercase"
+                />
+                {couponPreview?.valid ? (
+                  <button
+                    type="button"
+                    onClick={clearCoupon}
+                    className="shrink-0 border border-outline-variant/40 px-3 font-meta text-[10px] uppercase"
+                  >
+                    Kaldır
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void applyCoupon()}
+                    disabled={couponLoading}
+                    className="shrink-0 border border-primary px-3 font-meta text-[10px] uppercase text-primary disabled:opacity-50"
+                  >
+                    {couponLoading ? "…" : "Uygula"}
+                  </button>
+                )}
+              </div>
+              {couponError ? (
+                <p className="font-meta text-[10px] uppercase text-error">
+                  {couponError}
+                </p>
+              ) : null}
+              {couponPreview?.valid ? (
+                <p className="font-meta text-[10px] uppercase text-primary">
+                  {couponPreview.title || couponPreview.code} uygulandı
+                </p>
+              ) : null}
+            </div>
             <div className="space-y-3 border-b border-outline-variant/20 pb-6 font-meta text-xs uppercase">
               <Row label="Ara Toplam" value={formatMoney(subtotal)} />
+              {discountAmount > 0 ? (
+                <Row
+                  label={`İndirim (${couponPreview?.code})`}
+                  value={`−${formatMoney(discountAmount)}`}
+                />
+              ) : null}
               <Row label="Kargo" value={formatMoney(shippingFee)} />
+              <Row
+                label={`KDV (%${totals.ratePercent}${totals.taxIncluded ? " dahil" : ""})`}
+                value={formatMoney(totals.taxAmount)}
+              />
               <Row label="Toplam" value={formatMoney(total)} accent />
             </div>
             {error ? (

@@ -26,6 +26,20 @@ import {
   PushMarketplaceProductDto,
 } from '@modules/marketplace/dto/marketplace.dto';
 
+function maskCredentials(
+  credentials: Record<string, string> | null | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(credentials || {})) {
+    if (!value) {
+      out[key] = '';
+      continue;
+    }
+    out[key] = value.length <= 4 ? '****' : `****${value.slice(-4)}`;
+  }
+  return out;
+}
+
 @Injectable()
 export class MarketplaceService {
   private readonly adapters: Map<MarketplacePlatform, IMarketplaceAdapter>;
@@ -51,10 +65,18 @@ export class MarketplaceService {
     return adapter;
   }
 
+  private sanitize(account: MarketplaceAccount): MarketplaceAccount {
+    return {
+      ...account,
+      credentials: maskCredentials(account.credentials),
+    } as MarketplaceAccount;
+  }
+
   async listAccounts(): Promise<MarketplaceAccount[]> {
-    return this.em.find(MarketplaceAccount, {
+    const rows = await this.em.find(MarketplaceAccount, {
       order: { createdAt: 'DESC' },
     });
+    return rows.map((r) => this.sanitize(r));
   }
 
   async createAccount(
@@ -66,7 +88,8 @@ export class MarketplaceService {
       isEnabled: dto.isEnabled ?? false,
       credentials: dto.credentials ?? {},
     });
-    return this.em.save(account);
+    const saved = await this.em.save(account);
+    return this.sanitize(saved);
   }
 
   async updateAccount(
@@ -79,8 +102,14 @@ export class MarketplaceService {
     if (!account) {
       throw new NotFoundException('Pazar yeri hesabı bulunamadı');
     }
-    Object.assign(account, dto);
-    return this.em.save(account);
+    if (dto.platform !== undefined) account.platform = dto.platform;
+    if (dto.storeName !== undefined) account.storeName = dto.storeName;
+    if (dto.isEnabled !== undefined) account.isEnabled = dto.isEnabled;
+    if (dto.credentials !== undefined) {
+      account.credentials = dto.credentials;
+    }
+    const saved = await this.em.save(account);
+    return this.sanitize(saved);
   }
 
   async removeAccount(id: string): Promise<void> {
@@ -93,6 +122,34 @@ export class MarketplaceService {
     await this.em.remove(account);
   }
 
+  async listListings(accountId: string): Promise<MarketplaceListing[]> {
+    const account = await this.em.findOne(MarketplaceAccount, {
+      where: { id: accountId },
+    });
+    if (!account) {
+      throw new NotFoundException('Pazar yeri hesabı bulunamadı');
+    }
+    return this.em.find(MarketplaceListing, {
+      where: { accountId },
+      relations: { product: true, variant: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async listOrders(accountId: string): Promise<MarketplaceOrder[]> {
+    const account = await this.em.findOne(MarketplaceAccount, {
+      where: { id: accountId },
+    });
+    if (!account) {
+      throw new NotFoundException('Pazar yeri hesabı bulunamadı');
+    }
+    return this.em.find(MarketplaceOrder, {
+      where: { accountId },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
+  }
+
   async syncAccount(id: string, dto: SyncMarketplaceDto = {}) {
     const account = await this.em.findOne(MarketplaceAccount, {
       where: { id },
@@ -101,57 +158,92 @@ export class MarketplaceService {
     if (!account) {
       throw new NotFoundException('Pazar yeri hesabı bulunamadı');
     }
+    if (!account.isEnabled) {
+      throw new BadRequestException('Hesap pasif — senkronizasyon kapalı');
+    }
 
+    const dryRun = dto.dryRun === true;
     const adapter = this.getAdapter(account.platform);
     const mode = dto.mode || 'all';
-    const result: Record<string, unknown> = {};
+    const result: Record<string, unknown> = { dryRun, stub: true };
 
-    if (mode === 'stock' || mode === 'all') {
-      const listings = await this.em.find(MarketplaceListing, {
-        where: { accountId: account.id, syncStock: true, isActive: true },
-        relations: { product: true, variant: true },
-      });
-      const items = listings.map((l) => ({
-        externalListingId: l.externalListingId,
-        stock: l.variant?.stock ?? l.product?.stock ?? 0,
-        sku: l.externalSku || undefined,
-      }));
-      const stockResult = await adapter.syncStock(account.credentials, items);
-      for (const listing of listings) {
-        listing.lastSyncedStock =
-          listing.variant?.stock ?? listing.product?.stock ?? 0;
-        await this.em.save(listing);
-      }
-      result.stock = stockResult;
-    }
-
-    if (mode === 'orders' || mode === 'all') {
-      const pulled = await adapter.pullOrders(account.credentials);
-      for (const order of pulled.orders) {
-        const existing = await this.em.findOne(MarketplaceOrder, {
-          where: {
-            accountId: account.id,
-            externalOrderId: order.externalOrderId,
-          },
+    try {
+      if (mode === 'stock' || mode === 'all') {
+        const listings = await this.em.find(MarketplaceListing, {
+          where: { accountId: account.id, syncStock: true, isActive: true },
+          relations: { product: true, variant: true },
         });
-        if (!existing) {
-          const row = this.em.create(MarketplaceOrder, {
-            accountId: account.id,
-            externalOrderId: order.externalOrderId,
-            externalStatus: order.externalStatus,
-            payload: order.payload,
-          });
-          await this.em.save(row);
+        const items = listings.map((l) => ({
+          externalListingId: l.externalListingId,
+          stock: l.variant?.stock ?? l.product?.stock ?? 0,
+          sku: l.externalSku || undefined,
+        }));
+        const stockResult = await adapter.syncStock(
+          account.credentials,
+          items,
+        );
+        if (!dryRun) {
+          for (const listing of listings) {
+            listing.lastSyncedStock =
+              listing.variant?.stock ?? listing.product?.stock ?? 0;
+            await this.em.save(listing);
+          }
         }
+        result.stock = stockResult;
       }
-      result.orders = pulled;
+
+      if (mode === 'orders' || mode === 'all') {
+        const pulled = await adapter.pullOrders(account.credentials);
+        let inserted = 0;
+        if (!dryRun) {
+          for (const order of pulled.orders) {
+            const existing = await this.em.findOne(MarketplaceOrder, {
+              where: {
+                accountId: account.id,
+                externalOrderId: order.externalOrderId,
+              },
+            });
+            if (!existing) {
+              const row = this.em.create(MarketplaceOrder, {
+                accountId: account.id,
+                externalOrderId: order.externalOrderId,
+                externalStatus: order.externalStatus,
+                payload: order.payload,
+              });
+              await this.em.save(row);
+              inserted += 1;
+            }
+          }
+        }
+        result.orders = { ...pulled, inserted: dryRun ? 0 : inserted };
+      }
+
+      if (!dryRun) {
+        account.lastSyncAt = new Date();
+        account.lastSyncStatus = 'success';
+        await this.em.save(account);
+      }
+
+      return {
+        accountId: account.id,
+        dryRun,
+        status: 'success' as const,
+        ...result,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!dryRun) {
+        account.lastSyncAt = new Date();
+        account.lastSyncStatus = 'error';
+        await this.em.save(account);
+      }
+      throw new BadRequestException({
+        message: `Senkron başarısız: ${message}`,
+        accountId: account.id,
+        status: 'error',
+        dryRun,
+      });
     }
-
-    account.lastSyncAt = new Date();
-    account.lastSyncStatus = 'success';
-    await this.em.save(account);
-
-    return { accountId: account.id, ...result };
   }
 
   async pushProduct(accountId: string, dto: PushMarketplaceProductDto) {
@@ -160,6 +252,9 @@ export class MarketplaceService {
     });
     if (!account) {
       throw new NotFoundException('Pazar yeri hesabı bulunamadı');
+    }
+    if (!account.isEnabled) {
+      throw new BadRequestException('Hesap pasif — ürün gönderimi kapalı');
     }
     const product = await this.em.findOne(Product, {
       where: { id: dto.productId },
@@ -193,6 +288,10 @@ export class MarketplaceService {
       description: product.shortDescription || product.description,
     });
 
+    if (dto.dryRun) {
+      return { dryRun: true, listing: null, pushed };
+    }
+
     const listing = this.em.create(MarketplaceListing, {
       accountId: account.id,
       productId: product.id,
@@ -204,6 +303,6 @@ export class MarketplaceService {
       isActive: true,
     });
     await this.em.save(listing);
-    return { listing, pushed };
+    return { dryRun: false, listing, pushed };
   }
 }

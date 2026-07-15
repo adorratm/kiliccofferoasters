@@ -6,9 +6,11 @@ import {
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { Product } from '@entities/product.entity';
+import { ProductVariant } from '@entities/product-variant.entity';
 import {
   CreateProductDto,
   ProductQueryDto,
+  ProductVariantDto,
   UpdateProductDto,
 } from '@modules/catalog/dto/catalog.dto';
 import {
@@ -157,32 +159,37 @@ export class ProductsService {
     if (exists) {
       throw new ConflictException('Bu slug zaten kullanılıyor');
     }
+    const { variants, ...productFields } = dto;
     const product = this.em.create(Product, {
-      slug: dto.slug,
-      name: dto.name,
-      description: dto.description,
-      shortDescription: dto.shortDescription ?? null,
-      originCountry: dto.originCountry ?? null,
-      originRegion: dto.originRegion ?? null,
-      altitude: dto.altitude ?? null,
-      process: dto.process ?? null,
-      varietal: dto.varietal ?? null,
-      batchId: dto.batchId ?? null,
-      roastLevel: dto.roastLevel ?? null,
-      flavorNotes: dto.flavorNotes ?? [],
-      flavorGeometry: dto.flavorGeometry ?? null,
-      roastLog: dto.roastLog ?? null,
-      imageUrl: dto.imageUrl ?? null,
-      gallery: dto.gallery ?? [],
-      badge: dto.badge ?? null,
-      basePrice: dto.basePrice,
-      currency: dto.currency ?? 'TRY',
-      stock: dto.stock ?? 0,
-      isActive: dto.isActive ?? true,
-      isFeatured: dto.isFeatured ?? false,
-      categoryId: dto.categoryId ?? null,
+      slug: productFields.slug,
+      name: productFields.name,
+      description: productFields.description,
+      shortDescription: productFields.shortDescription ?? null,
+      originCountry: productFields.originCountry ?? null,
+      originRegion: productFields.originRegion ?? null,
+      altitude: productFields.altitude ?? null,
+      process: productFields.process ?? null,
+      varietal: productFields.varietal ?? null,
+      batchId: productFields.batchId ?? null,
+      roastLevel: productFields.roastLevel ?? null,
+      flavorNotes: productFields.flavorNotes ?? [],
+      flavorGeometry: productFields.flavorGeometry ?? null,
+      roastLog: productFields.roastLog ?? null,
+      imageUrl: productFields.imageUrl ?? null,
+      gallery: productFields.gallery ?? [],
+      badge: productFields.badge ?? null,
+      basePrice: productFields.basePrice,
+      currency: productFields.currency ?? 'TRY',
+      stock: productFields.stock ?? 0,
+      isActive: productFields.isActive ?? true,
+      isFeatured: productFields.isFeatured ?? false,
+      categoryId: productFields.categoryId ?? null,
     });
-    return this.em.save(product);
+    const saved = await this.em.save(product);
+    if (variants?.length) {
+      await this.syncVariants(saved.id, variants);
+    }
+    return this.findById(saved.id);
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<Product> {
@@ -195,16 +202,63 @@ export class ProductsService {
         throw new ConflictException('Bu slug zaten kullanılıyor');
       }
     }
+    const { variants, ...rest } = dto;
     Object.assign(product, {
-      ...dto,
+      ...rest,
       shortDescription:
-        dto.shortDescription !== undefined
-          ? dto.shortDescription
+        rest.shortDescription !== undefined
+          ? rest.shortDescription
           : product.shortDescription,
       categoryId:
-        dto.categoryId !== undefined ? dto.categoryId : product.categoryId,
+        rest.categoryId !== undefined ? rest.categoryId : product.categoryId,
     });
-    return this.em.save(product);
+    await this.em.save(product);
+    if (variants !== undefined) {
+      await this.syncVariants(product.id, variants);
+    }
+    return this.findById(product.id);
+  }
+
+  private async syncVariants(
+    productId: string,
+    variants: ProductVariantDto[],
+  ): Promise<void> {
+    const existing = await this.em.find(ProductVariant, {
+      where: { productId },
+    });
+    const keepIds = new Set(
+      variants.map((v) => v.id).filter((id): id is string => Boolean(id)),
+    );
+
+    for (const row of existing) {
+      if (!keepIds.has(row.id)) {
+        await this.em.remove(row);
+      }
+    }
+
+    for (const v of variants) {
+      if (v.id) {
+        const current = existing.find((e) => e.id === v.id);
+        if (!current) continue;
+        current.sku = v.sku;
+        current.weightLabel = v.weightLabel;
+        current.price = v.price;
+        current.stock = v.stock ?? current.stock;
+        current.isActive = v.isActive ?? true;
+        await this.em.save(current);
+      } else {
+        await this.em.save(
+          this.em.create(ProductVariant, {
+            productId,
+            sku: v.sku,
+            weightLabel: v.weightLabel,
+            price: v.price,
+            stock: v.stock ?? 0,
+            isActive: v.isActive ?? true,
+          }),
+        );
+      }
+    }
   }
 
   async remove(id: string): Promise<void> {

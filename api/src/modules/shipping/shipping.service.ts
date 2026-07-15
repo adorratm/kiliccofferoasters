@@ -210,6 +210,7 @@ export class ShippingService {
         events: mappedEvents,
         order: shipment.order
           ? {
+              id: shipment.order.id,
               orderNumber: shipment.order.orderNumber,
               status: shipment.order.status,
               customerName: shipment.order.customerName,
@@ -226,6 +227,7 @@ export class ShippingService {
       events: mappedEvents,
       order: shipment?.order
         ? {
+            id: shipment.order.id,
             orderNumber: shipment.order.orderNumber,
             status: shipment.order.status,
             customerName: shipment.order.customerName,

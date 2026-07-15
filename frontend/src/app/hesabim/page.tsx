@@ -16,8 +16,10 @@ import {
   updateAddress,
 } from "@/lib/api";
 import { Reveal } from "@/components/Reveal";
+import { StatusBadge } from "@/components/StatusBadge";
 import { clearToken, getToken } from "@/lib/auth";
 import { formatMoney } from "@/lib/format";
+import { clearWishlistCache } from "@/lib/wishlist";
 import type { Address, AddressPayload, Order, User } from "@/lib/types";
 
 const emptyAddressForm = (): AddressPayload => ({
@@ -76,6 +78,7 @@ export default function AccountPage() {
 
   function logout() {
     clearToken();
+    clearWishlistCache();
     router.push("/giris");
   }
 
@@ -194,7 +197,7 @@ export default function AccountPage() {
     <div className="page-shell py-16 md:py-24">
       <div className="mb-2 flex items-center justify-between gap-4 page-enter">
         <div className="font-meta text-xs uppercase tracking-widest text-primary">
-          Account / Orders
+          Hesap / Siparişler
         </div>
         <button
           type="button"
@@ -211,6 +214,24 @@ export default function AccountPage() {
       >
         {user.firstName || user.email}
       </p>
+
+      <div
+        className="mt-8 flex flex-wrap gap-4 animate-fade-up"
+        style={{ animationDelay: "120ms" }}
+      >
+        <Link
+          href="/hesabim/favoriler"
+          className="border border-outline-variant/40 px-5 py-3 font-meta text-[11px] uppercase tracking-widest hover:border-primary hover:text-primary"
+        >
+          Favorilerim
+        </Link>
+        <Link
+          href="/urunler"
+          className="border border-outline-variant/40 px-5 py-3 font-meta text-[11px] uppercase tracking-widest hover:border-primary hover:text-primary"
+        >
+          Alışverişe devam
+        </Link>
+      </div>
 
       <section className="mt-12">
         <Reveal className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -433,34 +454,59 @@ export default function AccountPage() {
           </Reveal>
         ) : (
           <div className="divide-y divide-outline-variant/20 border border-outline-variant/20">
-            {orders.map((order, i) => (
+            {orders.map((order, i) => {
+              const trackCode = order.shipments?.[0]?.trackingNumber;
+              return (
               <Reveal key={order.id} delay={Math.min(i, 6) * 55} variant="fade">
-              <Link
-                href={`/hesabim/siparisler/${order.id}`}
-                className="row-motion flex flex-col justify-between gap-3 px-5 py-5 hover:bg-surface-container-low md:flex-row md:items-center"
-              >
-                <div>
-                  <div className="font-meta text-sm uppercase text-primary">
-                    {order.orderNumber}
+              <div className="row-motion flex flex-col justify-between gap-4 px-5 py-5 hover:bg-surface-container-low md:flex-row md:items-center">
+                <Link
+                  href={`/hesabim/siparisler/${order.id}`}
+                  className="min-w-0 flex-1"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="font-meta text-sm uppercase text-primary">
+                      {order.orderNumber}
+                    </span>
+                    <StatusBadge status={order.status} />
                   </div>
-                  <div className="mt-1 font-meta text-[11px] uppercase text-secondary">
-                    {order.status}
+                  <div className="mt-2 font-meta text-[11px] uppercase text-secondary">
                     {order.createdAt
-                      ? ` · ${new Date(order.createdAt).toLocaleDateString("tr-TR")}`
-                      : ""}
+                      ? new Date(order.createdAt).toLocaleDateString("tr-TR")
+                      : null}
+                    {order.shippingProvider
+                      ? ` · ${order.shippingProvider}`
+                      : null}
                   </div>
                   <div className="mt-1 font-meta text-[11px] text-secondary">
                     {(order.items || [])
-                      .map((i) => `${i.productName} ×${i.quantity}`)
+                      .map((it) => `${it.productName} ×${it.quantity}`)
                       .join(", ") || "—"}
                   </div>
+                </Link>
+                <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
+                  <div className="font-meta text-sm text-on-surface">
+                    {formatMoney(order.total, order.currency)}
+                  </div>
+                  {trackCode ? (
+                    <Link
+                      href={`/takip/${encodeURIComponent(trackCode)}`}
+                      className="font-meta text-[10px] uppercase tracking-widest text-primary underline"
+                    >
+                      Kargo takip
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/hesabim/siparisler/${order.id}`}
+                      className="font-meta text-[10px] uppercase tracking-widest text-secondary underline hover:text-primary"
+                    >
+                      Detay
+                    </Link>
+                  )}
                 </div>
-                <div className="font-meta text-sm text-on-surface">
-                  {formatMoney(order.total, order.currency)}
-                </div>
-              </Link>
+              </div>
               </Reveal>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

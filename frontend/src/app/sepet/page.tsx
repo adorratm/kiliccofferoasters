@@ -98,10 +98,17 @@ export default function CartPage() {
                 item.product?.imageUrl,
                 item.product?.slug || item.productId,
               );
+              const grindMap: Record<string, string> = {
+                whole_bean: "Çekirdek",
+                filter: "Filtre",
+                espresso: "Espresso",
+                turkish: "Türk kahvesi",
+              };
               const meta = [
-                item.product?.originRegion,
-                item.product?.process,
-                item.variant?.weightLabel || item.product?.roastLevel,
+                item.variant?.weightLabel,
+                grindMap[item.grindOption || "whole_bean"] ||
+                  item.grindOption,
+                item.product?.roastLevel,
               ]
                 .filter(Boolean)
                 .join(" / ");

@@ -20,8 +20,13 @@ abstract class BaseMarketplaceAdapter implements IMarketplaceAdapter {
     return {
       synced: items.length,
       mock,
+      stub: true,
+      message: mock
+        ? 'Credentials yok — stok sync simüle edildi'
+        : 'Gerçek platform API henüz bağlı değil — stok sync stub',
       raw: {
         mock,
+        stub: true,
         platform: this.platform,
         items: items.map((i) => i.externalListingId),
       },
@@ -35,11 +40,18 @@ abstract class BaseMarketplaceAdapter implements IMarketplaceAdapter {
           {
             externalOrderId: `MOCK-${this.platform.toUpperCase()}-${Date.now()}`,
             externalStatus: 'Created',
-            payload: { mock: true, platform: this.platform },
+            payload: { mock: true, stub: true, platform: this.platform },
           },
         ]
       : [];
-    return { orders, mock };
+    return {
+      orders,
+      mock,
+      stub: true,
+      message: mock
+        ? 'Credentials yok — örnek sipariş üretildi'
+        : 'Gerçek API henüz bağlı değil; sipariş çekilmedi (stub)',
+    };
   }
 
   async pushProduct(
@@ -51,7 +63,11 @@ abstract class BaseMarketplaceAdapter implements IMarketplaceAdapter {
     return {
       externalListingId,
       mock,
-      rawResponse: { mock, platform: this.platform, input },
+      stub: true,
+      message: mock
+        ? 'Credentials yok — listing ID simüle edildi'
+        : 'Gerçek API henüz bağlı değil — listing ID stub üretildi',
+      rawResponse: { mock, stub: true, platform: this.platform, input },
     };
   }
 }

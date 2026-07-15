@@ -67,7 +67,9 @@ async function bootstrap() {
   const port = config.get<number>('apiPort') || 4000;
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`API listening on http://localhost:${port} — docs at /docs`);
+  console.log(
+    `API listening on http://localhost:${port} — docs at /docs`,
+  );
 }
 
 bootstrap();

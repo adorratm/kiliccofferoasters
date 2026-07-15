@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { formatMoney, productImage } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
@@ -12,7 +13,10 @@ export function ProductCard({ product }: Props) {
   const price = product.variants?.[0]?.price ?? product.basePrice;
 
   return (
-    <article className="group card-motion border border-outline-variant/20 bg-surface-container-low p-6 hover:border-primary">
+    <article className="group relative card-motion border border-outline-variant/20 bg-surface-container-low p-6 hover:border-primary">
+      <div className="absolute left-10 top-10 z-10">
+        <FavoriteButton productId={product.id} />
+      </div>
       <Link href={`/urunler/${product.slug}`} className="block">
         <div className="relative mb-6 aspect-4/5 overflow-hidden bg-surface-dim">
           <Image

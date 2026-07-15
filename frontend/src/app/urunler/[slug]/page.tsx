@@ -1,12 +1,13 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { AddToCartButton } from "@/components/AddToCartButton";
 import { FlavorGeometry } from "@/components/FlavorGeometry";
+import { ProductBuyBox } from "@/components/ProductBuyBox";
+import { ProductReviews } from "@/components/ProductReviews";
 import { Reveal } from "@/components/Reveal";
 import { getProductBySlug } from "@/lib/api";
 import { getSiteSettings } from "@/lib/cms";
 import { DEMO_PRODUCTS } from "@/lib/demo-products";
-import { formatMoney, productImage } from "@/lib/format";
+import { productImage } from "@/lib/format";
 import { JsonLd, buildProductMetadata, productJsonLd } from "@/lib/seo";
 
 type Props = {
@@ -36,8 +37,6 @@ export default async function ProductDetailPage({ params }: Props) {
 
   if (!product) notFound();
 
-  const variant = product.variants?.[0];
-  const price = variant?.price ?? product.basePrice;
   const images =
     product.gallery?.length > 0
       ? product.gallery
@@ -87,30 +86,21 @@ export default async function ProductDetailPage({ params }: Props) {
           delay={100}
         >
           <div>
-            <div className="mb-12 flex items-start justify-between gap-6">
+            <div className="mb-10 flex items-start justify-between gap-6">
               <div>
                 <div className="mb-2 font-meta text-sm uppercase tracking-widest text-primary">
-                  Pricing Matrix
+                  Configure / Buy
                 </div>
-                <div className="font-display text-4xl md:text-5xl">
-                  {formatMoney(price, product.currency)}
-                  {variant?.weightLabel ? (
-                    <span className="text-2xl text-secondary">
-                      {" "}
-                      / {variant.weightLabel}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="mb-2 font-meta text-sm uppercase tracking-widest text-on-surface-variant">
-                  Inventory
-                </div>
-                <div className="font-meta text-xl text-primary">
-                  {product.stock > 0
-                    ? `STABLE [${product.stock}]`
-                    : "DEPLETED"}
-                </div>
+                <p className="font-meta text-xs uppercase text-on-surface-variant">
+                  Ağırlık · öğütme · stok{" "}
+                  {product.stock > 0 ? `[${product.stock}]` : "[0]"}
+                </p>
+                {(product.ratingCount ?? 0) > 0 ? (
+                  <p className="mt-2 font-meta text-xs uppercase tracking-widest text-primary">
+                    {Number(product.ratingAvg || 0).toFixed(1)} / 5 ·{" "}
+                    {product.ratingCount} yorum
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -145,10 +135,7 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
 
           <div>
-            <AddToCartButton
-              productId={product.id}
-              variantId={variant?.id}
-            />
+            <ProductBuyBox product={product} />
             <div className="mt-4 flex justify-between font-meta text-[10px] uppercase tracking-widest text-on-surface-variant">
               <span>Secure_Protocol_V3</span>
               <span>Global_Logistics_Enabled</span>
@@ -214,6 +201,13 @@ export default async function ProductDetailPage({ params }: Props) {
           </Reveal>
         </div>
       </section>
+
+      <ProductReviews
+        productId={product.id}
+        slug={product.slug}
+        ratingAvg={product.ratingAvg}
+        ratingCount={product.ratingCount}
+      />
     </div>
   );
 }

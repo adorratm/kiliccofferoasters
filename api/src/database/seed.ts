@@ -5,8 +5,10 @@ import { AppDataSource } from '@database/data-source';
 import { AdminAllowlist } from '@entities/admin-allowlist.entity';
 import { Category } from '@entities/category.entity';
 import { Product } from '@entities/product.entity';
+import { ProductVariant } from '@entities/product-variant.entity';
 import { LegalDocument } from '@entities/legal-document.entity';
 import { BlogPost } from '@entities/blog-post.entity';
+import { Coupon, CouponType } from '@entities/coupon.entity';
 import { ShippingProviderConfig } from '@entities/shipping-provider-config.entity';
 import { ShippingProviderCode } from '@entities/shipment.entity';
 import { SiteSetting } from '@entities/site-setting.entity';
@@ -130,10 +132,44 @@ async function seed() {
   ];
 
   for (const p of products) {
-    const exists = await em.findOne(Product, { where: { slug: p.slug } });
-    if (!exists) {
-      await em.save(em.create(Product, { ...p, currency: 'TRY', isActive: true, gallery: [] }));
+    let product = await em.findOne(Product, { where: { slug: p.slug } });
+    if (!product) {
+      product = await em.save(
+        em.create(Product, {
+          ...p,
+          currency: 'TRY',
+          isActive: true,
+          gallery: [],
+        }),
+      );
       console.log('Product:', p.slug);
+    }
+
+    const variantCount = await em.count(ProductVariant, {
+      where: { productId: product.id },
+    });
+    if (variantCount === 0) {
+      await em.save(
+        em.create(ProductVariant, {
+          productId: product.id,
+          sku: `${p.slug}-250`.toUpperCase().slice(0, 80),
+          weightLabel: '250g',
+          price: p.basePrice,
+          stock: p.stock,
+          isActive: true,
+        }),
+      );
+      await em.save(
+        em.create(ProductVariant, {
+          productId: product.id,
+          sku: `${p.slug}-1000`.toUpperCase().slice(0, 80),
+          weightLabel: '1kg',
+          price: (Number(p.basePrice) * 3.6).toFixed(2),
+          stock: Math.max(10, Math.floor(p.stock / 2)),
+          isActive: true,
+        }),
+      );
+      console.log('Variants:', p.slug);
     }
   }
 
@@ -289,10 +325,19 @@ async function seed() {
         });
         changed = true;
       }
+      for (const list of [nav.header, nav.footerNav]) {
+        if (!list) continue;
+        for (const link of list) {
+          if (link.href === '/takip/ornek') {
+            link.href = '/takip';
+            changed = true;
+          }
+        }
+      }
       if (changed) {
         exists.value = nav;
         await em.save(exists);
-        console.log('Site setting navigation: +blog');
+        console.log('Site setting navigation: updated');
       }
     }
   }
@@ -314,6 +359,28 @@ async function seed() {
       );
       console.log('Content section:', section.page, section.sectionKey);
     }
+  }
+
+  const welcomeCoupon = await em.findOne(Coupon, {
+    where: { code: 'HOSGELDIN10' },
+  });
+  if (!welcomeCoupon) {
+    await em.save(
+      em.create(Coupon, {
+        code: 'HOSGELDIN10',
+        title: 'Hoş geldin %10',
+        type: CouponType.PERCENT,
+        value: '10',
+        minSubtotal: '0',
+        maxUses: null,
+        usedCount: 0,
+        firstOrderOnly: true,
+        startsAt: null,
+        endsAt: null,
+        isActive: true,
+      }),
+    );
+    console.log('Coupon: HOSGELDIN10');
   }
 
   console.log('Seed tamamlandı.');

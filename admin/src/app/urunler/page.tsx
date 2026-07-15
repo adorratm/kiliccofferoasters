@@ -8,7 +8,16 @@ import { MediaUpload } from '@/components/MediaUpload';
 import { GalleryMediaField } from '@/components/GalleryMediaField';
 import { Checkbox } from '@/components/Checkbox';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import type { Product } from '@/lib/types';
+import type { Product, ProductVariant } from '@/lib/types';
+
+type VariantForm = {
+  id?: string;
+  sku: string;
+  weightLabel: string;
+  price: string;
+  stock: string;
+  isActive: boolean;
+};
 
 type FormState = {
   id?: string;
@@ -30,7 +39,16 @@ type FormState = {
   gallery: string;
   isActive: boolean;
   isFeatured: boolean;
+  variants: VariantForm[];
 };
+
+const emptyVariant = (): VariantForm => ({
+  sku: '',
+  weightLabel: '250g',
+  price: '',
+  stock: '0',
+  isActive: true,
+});
 
 const emptyForm = (): FormState => ({
   name: '',
@@ -51,6 +69,7 @@ const emptyForm = (): FormState => ({
   gallery: '',
   isActive: true,
   isFeatured: false,
+  variants: [emptyVariant()],
 });
 
 export default function ProductsPage() {
@@ -62,6 +81,9 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteVariantIndex, setDeleteVariantIndex] = useState<number | null>(
+    null,
+  );
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('createdAt');
   const [order, setOrder] = useState<'asc' | 'desc'>('desc');
@@ -106,6 +128,17 @@ export default function ProductsPage() {
   }
 
   function startEdit(p: Product) {
+    const variants: VariantForm[] =
+      p.variants && p.variants.length
+        ? p.variants.map((v: ProductVariant) => ({
+            id: v.id,
+            sku: v.sku || '',
+            weightLabel: v.weightLabel || '',
+            price: String(v.price ?? ''),
+            stock: String(v.stock ?? 0),
+            isActive: v.isActive !== false,
+          }))
+        : [emptyVariant()];
     setForm({
       id: p.id,
       name: p.name,
@@ -126,6 +159,7 @@ export default function ProductsPage() {
       gallery: (p.gallery || []).join('\n'),
       isActive: p.isActive,
       isFeatured: Boolean(p.isFeatured),
+      variants,
     });
     setEditing(true);
   }
@@ -134,12 +168,22 @@ export default function ProductsPage() {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    const variants = form.variants
+      .filter((v) => v.sku.trim() && v.weightLabel.trim() && v.price)
+      .map((v) => ({
+        ...(v.id ? { id: v.id } : {}),
+        sku: v.sku.trim(),
+        weightLabel: v.weightLabel.trim(),
+        price: String(v.price),
+        stock: Number(v.stock) || 0,
+        isActive: v.isActive,
+      }));
     const payload = {
       name: form.name,
       slug: form.slug || slugify(form.name),
       description: form.description,
       shortDescription: form.shortDescription || null,
-      basePrice: Number(form.basePrice),
+      basePrice: String(form.basePrice),
       stock: Number(form.stock),
       roastLevel: form.roastLevel || null,
       originCountry: form.originCountry || null,
@@ -159,6 +203,7 @@ export default function ProductsPage() {
         .filter(Boolean),
       isActive: form.isActive,
       isFeatured: form.isFeatured,
+      variants,
     };
     try {
       if (form.id) {
@@ -424,6 +469,105 @@ export default function ProductsPage() {
               folder="products"
             />
           </div>
+          <div className="md:col-span-2 space-y-3 border border-border-muted p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="mono text-[10px] uppercase text-muted">
+                Varyantlar (ağırlık / SKU)
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    variants: [...f.variants, emptyVariant()],
+                  }))
+                }
+                className="text-xs text-accent hover:underline"
+              >
+                + Varyant
+              </button>
+            </div>
+            {form.variants.map((v, i) => (
+              <div
+                key={v.id || i}
+                className="grid gap-2 border border-border-muted/60 p-2 md:grid-cols-5"
+              >
+                <input
+                  placeholder="SKU"
+                  value={v.sku}
+                  onChange={(e) =>
+                    setForm((f) => {
+                      const variants = [...f.variants];
+                      variants[i] = { ...variants[i], sku: e.target.value };
+                      return { ...f, variants };
+                    })
+                  }
+                  className="border border-border-muted bg-background px-2 py-1.5 text-sm mono"
+                />
+                <input
+                  placeholder="250g"
+                  value={v.weightLabel}
+                  onChange={(e) =>
+                    setForm((f) => {
+                      const variants = [...f.variants];
+                      variants[i] = {
+                        ...variants[i],
+                        weightLabel: e.target.value,
+                      };
+                      return { ...f, variants };
+                    })
+                  }
+                  className="border border-border-muted bg-background px-2 py-1.5 text-sm"
+                />
+                <input
+                  placeholder="Fiyat"
+                  value={v.price}
+                  onChange={(e) =>
+                    setForm((f) => {
+                      const variants = [...f.variants];
+                      variants[i] = { ...variants[i], price: e.target.value };
+                      return { ...f, variants };
+                    })
+                  }
+                  className="border border-border-muted bg-background px-2 py-1.5 text-sm"
+                />
+                <input
+                  placeholder="Stok"
+                  value={v.stock}
+                  onChange={(e) =>
+                    setForm((f) => {
+                      const variants = [...f.variants];
+                      variants[i] = { ...variants[i], stock: e.target.value };
+                      return { ...f, variants };
+                    })
+                  }
+                  className="border border-border-muted bg-background px-2 py-1.5 text-sm"
+                />
+                <div className="flex flex-col gap-2 md:col-span-5 md:flex-row md:items-center md:justify-between">
+                  <Checkbox
+                    checked={v.isActive}
+                    onChange={(isActive) =>
+                      setForm((f) => {
+                        const variants = [...f.variants];
+                        variants[i] = { ...variants[i], isActive };
+                        return { ...f, variants };
+                      })
+                    }
+                    label="Aktif"
+                    description="Mağazada seçilebilir"
+                  />
+                  <button
+                    type="button"
+                    disabled={form.variants.length <= 1}
+                    onClick={() => setDeleteVariantIndex(i)}
+                    className="text-xs text-danger hover:underline disabled:opacity-30"
+                  >
+                    Sil
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
           <Checkbox
             checked={form.isActive}
             onChange={(isActive) => setForm((f) => ({ ...f, isActive }))}
@@ -525,6 +669,29 @@ export default function ProductsPage() {
         loading={deleting}
         onCancel={() => setDeleteId(null)}
         onConfirm={() => void confirmRemove()}
+      />
+
+      <ConfirmDialog
+        open={deleteVariantIndex !== null}
+        title="Varyantı sil?"
+        description={
+          deleteVariantIndex !== null
+            ? `"${form.variants[deleteVariantIndex]?.weightLabel || form.variants[deleteVariantIndex]?.sku || 'Bu varyant'}" formdan kaldırılacak. Kaydetmeden kalıcı olmaz.`
+            : undefined
+        }
+        confirmLabel="Varyantı sil"
+        onCancel={() => setDeleteVariantIndex(null)}
+        onConfirm={() => {
+          if (deleteVariantIndex === null) return;
+          setForm((f) => ({
+            ...f,
+            variants:
+              f.variants.length > 1
+                ? f.variants.filter((_, idx) => idx !== deleteVariantIndex)
+                : f.variants,
+          }));
+          setDeleteVariantIndex(null);
+        }}
       />
 
       {totalPages > 1 ? (

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { Order, OrderStatus } from '@entities/order.entity';
@@ -10,6 +11,8 @@ import { OrderItem } from '@entities/order-item.entity';
 import { Cart } from '@entities/cart.entity';
 import { CartItem } from '@entities/cart-item.entity';
 import { Payment, PaymentStatus } from '@entities/payment.entity';
+import { ShippingProviderConfig } from '@entities/shipping-provider-config.entity';
+import { ShippingProviderCode } from '@entities/shipment.entity';
 import {
   CreateOrderDto,
   OrderQueryDto,
@@ -17,6 +20,11 @@ import {
 } from '@modules/orders/dto/orders.dto';
 import { NotificationsService } from '@modules/notifications/notifications.service';
 import { statusLabel } from '@modules/notifications/notification.templates';
+import { CouponsService } from '@modules/coupons/coupons.service';
+import {
+  GRIND_LABELS,
+  isGrindOption,
+} from '@common/constants/grind-options';
 import {
   paginateResult,
   PaginatedResult,
@@ -27,6 +35,8 @@ export class OrdersService {
   constructor(
     @InjectEntityManager() private readonly em: EntityManager,
     private readonly notifications: NotificationsService,
+    private readonly config: ConfigService,
+    private readonly coupons: CouponsService,
   ) {}
 
   async createFromCart(
@@ -59,9 +69,34 @@ export class OrdersService {
       (sum, item) => sum + Number(item.unitPrice) * item.quantity,
       0,
     );
-    const shippingFee = 0;
-    const taxAmount = 0;
-    const total = subtotal + shippingFee + taxAmount;
+
+    let discountAmount = 0;
+    let couponCode: string | null = null;
+    if (dto.couponCode?.trim()) {
+      const preview = await this.coupons.validate(
+        {
+          code: dto.couponCode.trim(),
+          subtotal,
+          email: dto.customerEmail,
+        },
+        userId,
+      );
+      if (!preview.valid) {
+        throw new BadRequestException(preview.message || 'Geçersiz kupon');
+      }
+      discountAmount = Number(preview.discountAmount);
+      couponCode = preview.code;
+    }
+
+    const afterDiscount = Math.max(0, subtotal - discountAmount);
+    const shippingFee = await this.resolveShippingFee(
+      dto.shippingProvider,
+      afterDiscount,
+    );
+    const { taxAmount, total } = this.calculateTotals(
+      afterDiscount,
+      shippingFee,
+    );
 
     const orderNumber = await this.generateOrderNumber();
 
@@ -80,6 +115,8 @@ export class OrdersService {
         >) ?? null,
         subtotal: subtotal.toFixed(2),
         shippingFee: shippingFee.toFixed(2),
+        discountAmount: discountAmount.toFixed(2),
+        couponCode,
         taxAmount: taxAmount.toFixed(2),
         total: total.toFixed(2),
         currency: 'TRY',
@@ -89,18 +126,35 @@ export class OrdersService {
       });
       await tx.save(order);
 
-      const orderItems = cart!.items.map((item: CartItem) =>
-        tx.create(OrderItem, {
+      if (couponCode) {
+        await this.coupons.applyOnOrder(
+          tx,
+          couponCode,
+          subtotal,
+          order.id,
+          dto.customerEmail,
+          userId,
+        );
+      }
+
+      const orderItems = cart!.items.map((item: CartItem) => {
+        const grind =
+          item.grindOption && isGrindOption(item.grindOption)
+            ? item.grindOption
+            : item.grindOption || 'whole_bean';
+        return tx.create(OrderItem, {
           orderId: order.id,
           productId: item.productId,
           variantId: item.variantId,
           productName: item.product?.name || 'Ürün',
           variantLabel: item.variant?.weightLabel ?? null,
+          grindOption: grind,
+          grindLabel: isGrindOption(grind) ? GRIND_LABELS[grind] : grind,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           lineTotal: (Number(item.unitPrice) * item.quantity).toFixed(2),
-        }),
-      );
+        });
+      });
       await tx.save(orderItems);
 
       const payment = tx.create(Payment, {
@@ -229,5 +283,51 @@ export class OrdersService {
       if (!Number.isNaN(n)) seq = n + 1;
     }
     return `${prefix}${String(seq).padStart(4, '0')}`;
+  }
+
+  private async resolveShippingFee(
+    providerCode: string | undefined | null,
+    subtotal: number,
+  ): Promise<number> {
+    const freeOver = this.config.get<number>('shipping.freeOver') || 0;
+    if (freeOver > 0 && subtotal >= freeOver) {
+      return 0;
+    }
+
+    const defaultFee = this.config.get<number>('shipping.defaultFee') ?? 89.9;
+    if (!providerCode) return defaultFee;
+
+    const codes = Object.values(ShippingProviderCode) as string[];
+    if (!codes.includes(providerCode)) {
+      return defaultFee;
+    }
+
+    const config = await this.em.findOne(ShippingProviderConfig, {
+      where: {
+        provider: providerCode as ShippingProviderCode,
+        isEnabled: true,
+      },
+    });
+    const fee = config?.settings?.fee;
+    if (typeof fee === 'number') return fee;
+    if (typeof fee === 'string' && fee.trim()) {
+      const n = Number(fee);
+      return Number.isFinite(n) ? n : defaultFee;
+    }
+    return defaultFee;
+  }
+
+  private calculateTotals(subtotal: number, shippingFee: number) {
+    const rate = this.config.get<number>('tax.ratePercent') ?? 20;
+    const included = this.config.get<boolean>('tax.included') !== false;
+    const net = subtotal + shippingFee;
+
+    if (included) {
+      const taxAmount = rate > 0 ? (net * rate) / (100 + rate) : 0;
+      return { taxAmount, total: net };
+    }
+
+    const taxAmount = (net * rate) / 100;
+    return { taxAmount, total: net + taxAmount };
   }
 }

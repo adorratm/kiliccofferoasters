@@ -38,7 +38,7 @@ export const DEFAULT_SITE_SETTINGS: Record<
       { href: '/urunler', label: 'Kavrumlar' },
       { href: '/blog', label: 'Blog' },
       { href: '/iletisim', label: 'İletişim' },
-      { href: '/takip/ornek', label: 'Takip' },
+      { href: '/takip', label: 'Takip' },
     ],
     footerNav: [
       { href: '/urunler', label: 'Kavrumlar' },

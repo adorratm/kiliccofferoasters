@@ -40,6 +40,13 @@ export class SyncMarketplaceDto {
   @IsOptional()
   @IsString()
   mode?: 'stock' | 'orders' | 'all';
+
+  @ApiPropertyOptional({
+    description: 'true ise DB yazılmaz; adaptör sonucu döner',
+  })
+  @IsOptional()
+  @IsBoolean()
+  dryRun?: boolean;
 }
 
 export class PushMarketplaceProductDto {
@@ -51,4 +58,9 @@ export class PushMarketplaceProductDto {
   @IsOptional()
   @IsUUID()
   variantId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  dryRun?: boolean;
 }

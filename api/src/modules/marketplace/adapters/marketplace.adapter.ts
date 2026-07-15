@@ -25,6 +25,8 @@ export interface PushProductResult {
   externalListingId: string;
   rawResponse: Record<string, unknown>;
   mock: boolean;
+  stub?: boolean;
+  message?: string;
 }
 
 export interface IMarketplaceAdapter {
@@ -32,10 +34,21 @@ export interface IMarketplaceAdapter {
   syncStock(
     credentials: Record<string, string>,
     items: SyncStockItem[],
-  ): Promise<{ synced: number; mock: boolean; raw: Record<string, unknown> }>;
+  ): Promise<{
+    synced: number;
+    mock: boolean;
+    stub?: boolean;
+    message?: string;
+    raw: Record<string, unknown>;
+  }>;
   pullOrders(
     credentials: Record<string, string>,
-  ): Promise<{ orders: PulledOrder[]; mock: boolean }>;
+  ): Promise<{
+    orders: PulledOrder[];
+    mock: boolean;
+    stub?: boolean;
+    message?: string;
+  }>;
   pushProduct(
     credentials: Record<string, string>,
     input: PushProductInput,

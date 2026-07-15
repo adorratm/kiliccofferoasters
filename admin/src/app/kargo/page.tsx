@@ -8,6 +8,8 @@ import type { ShippingProviderConfig } from '@/lib/types';
 
 type Draft = {
   isEnabled: boolean;
+  fee: string;
+  estimatedDays: string;
   credentialsJson: string;
 };
 
@@ -28,8 +30,14 @@ export default function ShippingPage() {
       setRows(list);
       const next: Record<string, Draft> = {};
       for (const row of list) {
+        const settings = (row.settings || {}) as {
+          fee?: string | number;
+          estimatedDays?: string;
+        };
         next[row.id] = {
           isEnabled: row.isEnabled,
+          fee: settings.fee != null ? String(settings.fee) : '89.90',
+          estimatedDays: settings.estimatedDays || '2-5 gün',
           credentialsJson: JSON.stringify(row.credentials || {}, null, 2),
         };
       }
@@ -64,7 +72,14 @@ export default function ShippingPage() {
     try {
       await api(`/shipping/providers/${id}`, {
         method: 'PATCH',
-        body: { isEnabled: draft.isEnabled, credentials },
+        body: {
+          isEnabled: draft.isEnabled,
+          credentials,
+          settings: {
+            fee: draft.fee.trim() || '89.90',
+            estimatedDays: draft.estimatedDays.trim() || '2-5 gün',
+          },
+        },
       });
       setMessage('Kaydedildi');
       await load();
@@ -78,7 +93,7 @@ export default function ShippingPage() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        Sağlayıcıları etkinleştirin ve kimlik bilgilerini JSON olarak yapıştırın.
+        Sağlayıcıları etkinleştirin, kargo ücretini ve kimlik bilgilerini ayarlayın.
       </p>
       {error ? (
         <p className="border border-danger/40 bg-surface px-3 py-2 text-sm text-danger">
@@ -101,6 +116,8 @@ export default function ShippingPage() {
           {rows.map((row) => {
             const draft = drafts[row.id] || {
               isEnabled: row.isEnabled,
+              fee: '89.90',
+              estimatedDays: '2-5 gün',
               credentialsJson: '{}',
             };
             return (
@@ -127,12 +144,47 @@ export default function ShippingPage() {
                     label="Aktif"
                   />
                 </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="mono text-[10px] uppercase text-muted">
+                      Kargo ücreti (TRY)
+                    </span>
+                    <input
+                      value={draft.fee}
+                      onChange={(e) =>
+                        setDrafts((d) => ({
+                          ...d,
+                          [row.id]: { ...draft, fee: e.target.value },
+                        }))
+                      }
+                      className="mt-1 w-full border border-border-muted bg-background px-3 py-2"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mono text-[10px] uppercase text-muted">
+                      Tahmini süre
+                    </span>
+                    <input
+                      value={draft.estimatedDays}
+                      onChange={(e) =>
+                        setDrafts((d) => ({
+                          ...d,
+                          [row.id]: {
+                            ...draft,
+                            estimatedDays: e.target.value,
+                          },
+                        }))
+                      }
+                      className="mt-1 w-full border border-border-muted bg-background px-3 py-2"
+                    />
+                  </label>
+                </div>
                 <label className="block text-sm">
                   <span className="mono text-[10px] uppercase text-muted">
                     Credentials JSON
                   </span>
                   <textarea
-                    rows={8}
+                    rows={6}
                     value={draft.credentialsJson}
                     onChange={(e) =>
                       setDrafts((d) => ({

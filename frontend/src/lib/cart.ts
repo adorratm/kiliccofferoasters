@@ -48,6 +48,7 @@ export async function fetchCart(): Promise<Cart | null> {
 export async function cartAddItem(payload: {
   productId: string;
   variantId?: string | null;
+  grindOption?: string | null;
   quantity?: number;
 }) {
   const sessionId = getCartSessionId();
@@ -56,6 +57,7 @@ export async function cartAddItem(payload: {
     {
       productId: payload.productId,
       variantId: payload.variantId ?? null,
+      grindOption: payload.grindOption ?? "whole_bean",
       quantity: payload.quantity ?? 1,
     },
     getToken(),

@@ -79,6 +79,13 @@ export class Product extends BaseEntity {
   @Column({ name: 'is_featured', type: 'boolean', default: false })
   isFeatured!: boolean;
 
+  /** Onaylı yorum ortalaması (1–5) */
+  @Column({ name: 'rating_avg', type: 'decimal', precision: 3, scale: 2, default: 0 })
+  ratingAvg!: string;
+
+  @Column({ name: 'rating_count', type: 'int', default: 0 })
+  ratingCount!: number;
+
   @ManyToOne(() => Category, (category) => category.products, {
     nullable: true,
     onDelete: 'SET NULL',

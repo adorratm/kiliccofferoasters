@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { StatsCard } from '@/components/StatsCard';
@@ -26,6 +27,7 @@ function isToday(iso?: string): boolean {
 export default function DashboardPage() {
   const [ordersToday, setOrdersToday] = useState<number | string>('—');
   const [lowStock, setLowStock] = useState<number | string>('—');
+  const [revenueToday, setRevenueToday] = useState<number | string>('—');
   const [syncRows, setSyncRows] = useState<
     { platform: string; storeName: string; status: string; at: string }[]
   >([]);
@@ -47,6 +49,15 @@ export default function DashboardPage() {
           }
           if (typeof stats.lowStockCount === 'number') {
             setLowStock(stats.lowStockCount);
+          }
+          if (typeof stats.revenueToday === 'number') {
+            setRevenueToday(
+              new Intl.NumberFormat('tr-TR', {
+                style: 'currency',
+                currency: 'TRY',
+                maximumFractionDigits: 0,
+              }).format(stats.revenueToday),
+            );
           }
           if (stats.marketplaceSync?.length) {
             setSyncRows(
@@ -133,11 +144,16 @@ export default function DashboardPage() {
         </Reveal>
       ) : null}
 
-      <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" step={70}>
+      <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" step={70}>
         <StatsCard
           label="Bugünkü siparişler"
           value={loading ? '…' : ordersToday}
           tone="accent"
+        />
+        <StatsCard
+          label="Bugünkü ciro"
+          value={loading ? '…' : revenueToday}
+          hint="Ödenmiş / işlenen"
         />
         <StatsCard
           label="Düşük stok"
@@ -156,12 +172,27 @@ export default function DashboardPage() {
 
       <Reveal delay={120} variant="up">
         <section>
-          <h3 className="mb-3 mono text-xs uppercase tracking-widest text-muted">
-            Pazaryeri senkron
-          </h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="mono text-xs uppercase tracking-widest text-muted">
+              Pazaryeri senkron
+            </h3>
+            <Link
+              href="/pazaryeri"
+              className="mono text-[10px] uppercase text-accent hover:underline"
+            >
+              Yönet →
+            </Link>
+          </div>
           {syncRows.length === 0 ? (
             <div className="border border-border-muted bg-surface px-4 py-8 text-center text-sm text-muted">
-              {loading ? 'Yükleniyor…' : 'Henüz pazaryeri hesabı yok'}
+              {loading ? 'Yükleniyor…' : (
+                <>
+                  Henüz pazaryeri hesabı yok.{' '}
+                  <Link href="/pazaryeri" className="text-accent underline">
+                    Hesap ekle
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto border border-border-muted">
@@ -190,7 +221,15 @@ export default function DashboardPage() {
                     >
                       <td className="px-3 py-2 uppercase">{row.platform}</td>
                       <td className="px-3 py-2">{row.storeName}</td>
-                      <td className="px-3 py-2 mono text-xs text-accent">
+                      <td
+                        className={`px-3 py-2 mono text-xs ${
+                          row.status === 'error'
+                            ? 'text-danger'
+                            : row.status === 'success'
+                              ? 'text-success'
+                              : 'text-muted'
+                        }`}
+                      >
                         {row.status}
                       </td>
                       <td className="px-3 py-2 mono text-xs text-muted">

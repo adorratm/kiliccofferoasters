@@ -7,16 +7,20 @@ import type {
   Cart,
   Category,
   CheckoutPayload,
+  CouponPreview,
   LegalDocument,
   Order,
   Paginated,
   PaymentInitResponse,
   Product,
   ProductQuery,
+  ProductReview,
+  ProductReviewsResponse,
   SearchResponse,
   ShippingProvider,
   TrackingResult,
   User,
+  WishlistItem,
 } from "@/lib/types";
 
 export const API_BASE =
@@ -177,13 +181,50 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   }
 }
 
+export async function getProductReviews(
+  slug: string,
+  page = 1,
+  limit = 20,
+): Promise<ProductReviewsResponse> {
+  const qs = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  return apiFetch<ProductReviewsResponse>(
+    `/reviews/product/${encodeURIComponent(slug)}?${qs}`,
+    { cache: "no-store" },
+  );
+}
+
+export async function createReview(
+  payload: {
+    productId: string;
+    rating: number;
+    title?: string;
+    body: string;
+  },
+  token: string,
+): Promise<ProductReview> {
+  return apiFetch<ProductReview>("/reviews", {
+    method: "POST",
+    token,
+    json: payload,
+    cache: "no-store",
+  });
+}
+
 export async function getCart(sessionId: string, token?: string | null) {
   return apiFetch<Cart>("/cart", { sessionId, token });
 }
 
 export async function addCartItem(
   sessionId: string,
-  payload: { productId: string; variantId?: string | null; quantity: number },
+  payload: {
+    productId: string;
+    variantId?: string | null;
+    grindOption?: string | null;
+    quantity: number;
+  },
   token?: string | null,
 ) {
   return apiFetch<Cart>("/cart/items", {
@@ -318,6 +359,57 @@ export async function checkout(
     sessionId,
     token,
     json: payload,
+  });
+}
+
+export async function validateCoupon(
+  code: string,
+  subtotal: number,
+  email?: string,
+  token?: string | null,
+): Promise<CouponPreview> {
+  const qs = new URLSearchParams({
+    code: code.trim().toUpperCase(),
+    subtotal: String(subtotal),
+  });
+  if (email?.trim()) qs.set("email", email.trim());
+  return apiFetch<CouponPreview>(`/coupons/validate?${qs}`, {
+    token,
+    cache: "no-store",
+  });
+}
+
+export async function getWishlist(token: string): Promise<WishlistItem[]> {
+  return apiFetch<WishlistItem[]>("/wishlist", { token, cache: "no-store" });
+}
+
+export async function getWishlistIds(token: string): Promise<string[]> {
+  return apiFetch<string[]>("/wishlist/ids", { token, cache: "no-store" });
+}
+
+export async function toggleWishlist(
+  productId: string,
+  token: string,
+): Promise<{ inWishlist: boolean; productId: string }> {
+  return apiFetch<{ inWishlist: boolean; productId: string }>(
+    "/wishlist/toggle",
+    {
+      method: "POST",
+      token,
+      json: { productId },
+      cache: "no-store",
+    },
+  );
+}
+
+export async function removeWishlistItem(
+  productId: string,
+  token: string,
+): Promise<void> {
+  await apiFetch(`/wishlist/${encodeURIComponent(productId)}`, {
+    method: "DELETE",
+    token,
+    cache: "no-store",
   });
 }
 

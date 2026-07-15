@@ -1,3 +1,12 @@
+export type ProductVariant = {
+  id?: string;
+  sku: string;
+  weightLabel: string;
+  price: string | number;
+  stock: number;
+  isActive?: boolean;
+};
+
 export type Product = {
   id: string;
   slug: string;
@@ -20,6 +29,7 @@ export type Product = {
   isActive: boolean;
   isFeatured?: boolean;
   categoryId?: string | null;
+  variants?: ProductVariant[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -138,10 +148,43 @@ export type NewsletterSubscriber = {
 export type DashboardStats = {
   ordersToday?: number;
   lowStockCount?: number;
+  revenueToday?: number;
+  pendingOrders?: number;
   marketplaceSync?: {
     platform: string;
     storeName: string;
     lastSyncAt?: string | null;
     lastSyncStatus?: string | null;
   }[];
+};
+
+export type Coupon = {
+  id: string;
+  code: string;
+  title: string | null;
+  type: 'percent' | 'fixed';
+  value: string;
+  minSubtotal: string;
+  maxUses: number | null;
+  usedCount: number;
+  firstOrderOnly: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ProductReview = {
+  id: string;
+  productId: string;
+  userId: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  authorName: string;
+  isApproved: boolean;
+  isVerifiedPurchase: boolean;
+  createdAt?: string;
+  product?: { id: string; name: string; slug?: string } | null;
 };

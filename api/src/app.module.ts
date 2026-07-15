@@ -26,10 +26,18 @@ import { TrackingModule } from '@modules/tracking/tracking.module';
 import { AddressesModule } from '@modules/addresses/addresses.module';
 import { SearchModule } from '@modules/search/search.module';
 import { BlogModule } from '@modules/blog/blog.module';
+import { AdminModule } from '@modules/admin/admin.module';
+import { CouponsModule } from '@modules/coupons/coupons.module';
+import { ReviewsModule } from '@modules/reviews/reviews.module';
+import { WishlistModule } from '@modules/wishlist/wishlist.module';
 
 @Module({
   imports: [
     HealthModule,
+    AdminModule,
+    CouponsModule,
+    ReviewsModule,
+    WishlistModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
