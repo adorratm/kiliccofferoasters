@@ -10,8 +10,10 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: [
         "/hesabim",
+        "/hesabim/",
         "/sepet",
         "/odeme",
+        "/odeme/",
         "/auth/",
         "/giris",
         "/kayit",

@@ -308,6 +308,39 @@ export type CouponPreview = {
   message?: string;
 };
 
+export type GuestOrderLookupResult = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  createdAt?: string;
+  customerName: string;
+  shippingCity: string | null;
+  shippingDistrict: string | null;
+  subtotal: string;
+  shippingFee: string;
+  discountAmount?: string;
+  taxAmount: string;
+  total: string;
+  currency: string;
+  shippingProvider: string | null;
+  items: Array<{
+    id: string;
+    productName: string;
+    variantLabel: string | null;
+    grindLabel?: string | null;
+    quantity: number;
+    unitPrice: string;
+    lineTotal: string;
+  }>;
+  shipments: Array<{
+    id: string;
+    provider: string;
+    status: string;
+    trackingNumber: string | null;
+    trackingUrl: string | null;
+  }>;
+};
+
 export type PaymentInitResponse = {
   orderId: string;
   orderNumber: string;

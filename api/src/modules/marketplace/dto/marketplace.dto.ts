@@ -47,6 +47,13 @@ export class SyncMarketplaceDto {
   @IsOptional()
   @IsBoolean()
   dryRun?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'true ise sync-all için Bull kuyruğuna ekler',
+  })
+  @IsOptional()
+  @IsBoolean()
+  enqueue?: boolean;
 }
 
 export class PushMarketplaceProductDto {

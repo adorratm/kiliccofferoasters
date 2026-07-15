@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, MoreThanOrEqual } from 'typeorm';
 import { Order, OrderStatus } from '@entities/order.entity';
-import { Product } from '@entities/product.entity';
 import { MarketplaceAccount } from '@entities/marketplace-account.entity';
+import { LowStockService } from '@modules/catalog/low-stock.service';
 
 export type DashboardStats = {
   ordersToday: number;
@@ -20,22 +20,26 @@ export type DashboardStats = {
 
 @Injectable()
 export class AdminService {
-  constructor(@InjectEntityManager() private readonly em: EntityManager) {}
+  constructor(
+    @InjectEntityManager() private readonly em: EntityManager,
+    private readonly lowStock: LowStockService,
+  ) {}
 
-  async getStats(lowStockThreshold = 10): Promise<DashboardStats> {
+  async getStats(lowStockThreshold?: number): Promise<DashboardStats> {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
 
-    const [ordersToday, lowStockCount, revenueRow, pendingOrders, accounts] =
+    const threshold =
+      lowStockThreshold !== undefined && Number.isFinite(lowStockThreshold)
+        ? lowStockThreshold
+        : this.lowStock.threshold();
+
+    const [ordersToday, lowStockRows, revenueRow, pendingOrders, accounts] =
       await Promise.all([
         this.em.count(Order, {
           where: { createdAt: MoreThanOrEqual(start) },
         }),
-        this.em
-          .createQueryBuilder(Product, 'p')
-          .where('p.is_active = true')
-          .andWhere('p.stock <= :threshold', { threshold: lowStockThreshold })
-          .getCount(),
+        this.lowStock.listLowStock(threshold),
         this.em
           .createQueryBuilder(Order, 'o')
           .select('COALESCE(SUM(o.total), 0)', 'sum')
@@ -52,7 +56,7 @@ export class AdminService {
 
     return {
       ordersToday,
-      lowStockCount,
+      lowStockCount: lowStockRows.length,
       revenueToday: Number(revenueRow?.sum || 0),
       pendingOrders,
       marketplaceSync: accounts.map((a) => ({

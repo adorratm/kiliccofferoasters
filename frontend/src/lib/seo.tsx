@@ -5,6 +5,104 @@ import type { BlogPost, Product } from "@/lib/types";
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
+type PageMetaInput = {
+  title: string;
+  description: string;
+  path: string;
+  settings: SiteSettings;
+  keywords?: string[];
+  image?: string | null;
+  noIndex?: boolean;
+};
+
+function ogImages(
+  image: string | undefined | null,
+  alt: string,
+): NonNullable<Metadata["openGraph"]>["images"] {
+  if (!image) return undefined;
+  return [{ url: image, width: 1200, height: 630, alt }];
+}
+
+export function buildPageMetadata({
+  title,
+  description,
+  path,
+  settings,
+  keywords,
+  image,
+  noIndex,
+}: PageMetaInput): Metadata {
+  const url = `${SITE_URL}${path}`;
+  const ogImage = image || settings.seo.ogImage;
+  const fullTitle = `${title} | ${settings.brand.name}`;
+  return {
+    title,
+    description,
+    keywords: keywords?.length
+      ? [...(settings.seo.keywords || []), ...keywords]
+      : undefined,
+    alternates: { canonical: url },
+    robots: noIndex
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
+    openGraph: {
+      type: "website",
+      locale: "tr_TR",
+      url,
+      siteName: settings.brand.name,
+      title: fullTitle,
+      description,
+      images: ogImages(ogImage, settings.brand.name),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fullTitle,
+      description,
+      images: ogImage ? [ogImage] : undefined,
+    },
+  };
+}
+
+export function buildCatalogMetadata(
+  settings: SiteSettings,
+  opts: {
+    categorySlug?: string;
+    categoryName?: string;
+    categoryDescription?: string | null;
+    q?: string;
+  } = {},
+): Metadata {
+  const { categorySlug, categoryName, categoryDescription, q } = opts;
+  const query = q?.trim();
+
+  let title = "Kavrumlar";
+  let description =
+    "Torbalı / İzmir’den specialty kahve kavrumları. Batch bazlı, profile kontrollü, taze kavrulmuş çekirdekler.";
+  let path = "/urunler";
+
+  if (categorySlug && categoryName) {
+    title = categoryName;
+    description =
+      categoryDescription?.trim() ||
+      `${categoryName} kategorisindeki kavrumlar — ${settings.brand.name}.`;
+    path = `/urunler?category=${encodeURIComponent(categorySlug)}`;
+  } else if (query) {
+    title = `Arama: ${query}`;
+    description = `“${query}” için kavrum sonuçları — ${settings.brand.name}.`;
+    path = `/urunler?q=${encodeURIComponent(query)}`;
+  }
+
+  return buildPageMetadata({
+    title,
+    description,
+    path,
+    settings,
+    keywords: categoryName
+      ? [categoryName, categorySlug || "", "kahve", "kavrum"]
+      : ["katalog", "kahve", "specialty coffee"],
+  });
+}
+
 export function buildSiteMetadata(settings: SiteSettings): Metadata {
   const { seo, brand } = settings;
   return {
@@ -22,9 +120,7 @@ export function buildSiteMetadata(settings: SiteSettings): Metadata {
       siteName: brand.name,
       title: seo.title,
       description: seo.description,
-      images: seo.ogImage
-        ? [{ url: seo.ogImage, width: 1200, height: 630, alt: brand.name }]
-        : undefined,
+      images: ogImages(seo.ogImage, brand.name),
     },
     twitter: {
       card: "summary_large_image",
@@ -59,10 +155,12 @@ export function buildProductMetadata(
     alternates: { canonical: url },
     openGraph: {
       type: "website",
+      locale: "tr_TR",
       url,
+      siteName: settings.brand.name,
       title: product.name,
       description,
-      images: image ? [{ url: image, alt: product.name }] : undefined,
+      images: ogImages(image, product.name),
     },
     twitter: {
       card: "summary_large_image",
@@ -74,36 +172,14 @@ export function buildProductMetadata(
 }
 
 export function buildBlogIndexMetadata(settings: SiteSettings): Metadata {
-  const title = "Blog";
-  const description =
-    "Kavrum teknikleri, demleme notları ve Kılıç Coffee Roasters günlüklerinden yazılar.";
-  const url = `${SITE_URL}/blog`;
-  return {
-    title,
-    description,
-    keywords: [
-      ...(settings.seo.keywords || []),
-      "blog",
-      "kahve blog",
-      "specialty coffee",
-    ],
-    alternates: { canonical: url },
-    openGraph: {
-      type: "website",
-      url,
-      title: `${title} | ${settings.brand.name}`,
-      description,
-      images: settings.seo.ogImage
-        ? [{ url: settings.seo.ogImage, alt: settings.brand.name }]
-        : undefined,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: settings.seo.ogImage ? [settings.seo.ogImage] : undefined,
-    },
-  };
+  return buildPageMetadata({
+    title: "Blog",
+    description:
+      "Kavrum teknikleri, demleme notları ve Kılıç Coffee Roasters günlüklerinden yazılar.",
+    path: "/blog",
+    settings,
+    keywords: ["blog", "kahve blog", "specialty coffee"],
+  });
 }
 
 export function buildBlogPostMetadata(
@@ -127,20 +203,41 @@ export function buildBlogPostMetadata(
     alternates: { canonical: url },
     openGraph: {
       type: "article",
+      locale: "tr_TR",
       url,
+      siteName: settings.brand.name,
       title,
       description,
       publishedTime: post.publishedAt || undefined,
       modifiedTime: post.updatedAt || undefined,
       authors: post.authorName ? [post.authorName] : undefined,
       tags: post.tags,
-      images: image ? [{ url: image, alt: post.title }] : undefined,
+      images: ogImages(image, post.title),
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
       images: image ? [image] : undefined,
+    },
+  };
+}
+
+export function websiteJsonLd(settings: SiteSettings) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: settings.brand.name,
+    url: SITE_URL,
+    description: settings.seo.description,
+    inLanguage: "tr-TR",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/urunler?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
     },
   };
 }
@@ -165,8 +262,29 @@ export function organizationJsonLd(settings: SiteSettings) {
   };
 }
 
+export function breadcrumbJsonLd(
+  items: { name: string; path: string }[],
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: `${SITE_URL}${item.path}`,
+    })),
+  };
+}
+
 export function productJsonLd(product: Product, settings: SiteSettings) {
   const price = product.variants?.[0]?.price ?? product.basePrice;
+  const stock =
+    product.variants?.some((v) => v.isActive && v.stock > 0) ||
+    product.stock > 0;
+  const ratingCount = product.ratingCount ?? 0;
+  const ratingAvg = Number(product.ratingAvg || 0);
+
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -182,12 +300,22 @@ export function productJsonLd(product: Product, settings: SiteSettings) {
       "@type": "Offer",
       priceCurrency: product.currency || "TRY",
       price,
-      availability:
-        product.stock > 0
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
+      availability: stock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
       url: `${SITE_URL}/urunler/${product.slug}`,
     },
+    ...(ratingCount > 0 && ratingAvg > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: ratingAvg.toFixed(1),
+            reviewCount: ratingCount,
+            bestRating: "5",
+            worstRating: "1",
+          },
+        }
+      : {}),
   };
 }
 

@@ -91,4 +91,24 @@ export default () => ({
     /** Sepet güncellenmeden kaç saat sonra hatırlatma (varsayılan 4) */
     hours: parseInt(process.env.ABANDONED_CART_HOURS || '4', 10),
   },
+  marketplaceSync: {
+    enabled: process.env.MARKETPLACE_SYNC_ENABLED !== 'false',
+    /** Saatlik varsayılan; en az 5 dk */
+    intervalMinutes: parseInt(
+      process.env.MARKETPLACE_SYNC_INTERVAL_MINUTES || '60',
+      10,
+    ),
+  },
+  lowStock: {
+    threshold: parseInt(process.env.LOW_STOCK_THRESHOLD || '10', 10),
+    /** Virgülle ayrılmış ekstra alıcılar; boşsa admin allowlist + DB allowlist */
+    alertEmails: (process.env.LOW_STOCK_ALERT_EMAILS || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+    scanIntervalHours: parseInt(
+      process.env.LOW_STOCK_SCAN_INTERVAL_HOURS || '24',
+      10,
+    ),
+  },
 });

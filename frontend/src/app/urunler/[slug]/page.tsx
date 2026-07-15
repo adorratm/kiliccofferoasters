@@ -8,7 +8,12 @@ import { getProductBySlug } from "@/lib/api";
 import { getSiteSettings } from "@/lib/cms";
 import { DEMO_PRODUCTS } from "@/lib/demo-products";
 import { productImage } from "@/lib/format";
-import { JsonLd, buildProductMetadata, productJsonLd } from "@/lib/seo";
+import {
+  JsonLd,
+  breadcrumbJsonLd,
+  buildProductMetadata,
+  productJsonLd,
+} from "@/lib/seo";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -53,6 +58,13 @@ export default async function ProductDetailPage({ params }: Props) {
   return (
     <div>
       <JsonLd data={productJsonLd(product, settings)} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Ana sayfa", path: "/" },
+          { name: "Kavrumlar", path: "/urunler" },
+          { name: product.name, path: `/urunler/${product.slug}` },
+        ])}
+      />
       <section className="grid grid-cols-1 border-b border-outline-variant/20 lg:grid-cols-12">
         <Reveal
           className="relative min-h-130 overflow-hidden border-r border-outline-variant/20 bg-surface lg:col-span-7 lg:min-h-217.5"

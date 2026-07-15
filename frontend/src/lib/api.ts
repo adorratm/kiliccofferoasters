@@ -8,6 +8,7 @@ import type {
   Category,
   CheckoutPayload,
   CouponPreview,
+  GuestOrderLookupResult,
   LegalDocument,
   Order,
   Paginated,
@@ -380,6 +381,20 @@ export async function retryPayment(
     method: "POST",
     token,
     json: { orderId, email: email || undefined },
+    cache: "no-store",
+  });
+}
+
+export async function lookupGuestOrder(
+  orderNumber: string,
+  email: string,
+): Promise<GuestOrderLookupResult> {
+  return apiFetch<GuestOrderLookupResult>("/orders/lookup", {
+    method: "POST",
+    json: {
+      orderNumber: orderNumber.trim(),
+      email: email.trim().toLowerCase(),
+    },
     cache: "no-store",
   });
 }

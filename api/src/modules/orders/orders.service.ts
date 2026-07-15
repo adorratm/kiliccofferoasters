@@ -15,12 +15,14 @@ import { ShippingProviderConfig } from '@entities/shipping-provider-config.entit
 import { ShippingProviderCode } from '@entities/shipment.entity';
 import {
   CreateOrderDto,
+  GuestOrderLookupDto,
   OrderQueryDto,
   UpdateOrderStatusDto,
 } from '@modules/orders/dto/orders.dto';
 import { NotificationsService } from '@modules/notifications/notifications.service';
 import { statusLabel } from '@modules/notifications/notification.templates';
 import { CouponsService } from '@modules/coupons/coupons.service';
+import { InventoryService } from '@modules/catalog/inventory.service';
 import {
   GRIND_LABELS,
   isGrindOption,
@@ -37,6 +39,7 @@ export class OrdersService {
     private readonly notifications: NotificationsService,
     private readonly config: ConfigService,
     private readonly coupons: CouponsService,
+    private readonly inventory: InventoryService,
   ) {}
 
   async createFromCart(
@@ -64,6 +67,8 @@ export class OrdersService {
     if (!cart?.items?.length) {
       throw new BadRequestException('Sepet boş');
     }
+
+    await this.inventory.assertCartStock(cart.items);
 
     const subtotal = cart.items.reduce(
       (sum, item) => sum + Number(item.unitPrice) * item.quantity,
@@ -232,6 +237,53 @@ export class OrdersService {
       throw new NotFoundException('Sipariş bulunamadı');
     }
     return order;
+  }
+
+  async lookupGuest(dto: GuestOrderLookupDto) {
+    const order = await this.em.findOne(Order, {
+      where: {
+        orderNumber: dto.orderNumber,
+        customerEmail: dto.email,
+      },
+      relations: { items: true, shipments: true },
+    });
+    if (!order) {
+      throw new NotFoundException('Sipariş bulunamadı');
+    }
+
+    const ship = order.shippingAddress || {};
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      createdAt: order.createdAt,
+      customerName: order.customerName,
+      shippingCity: ship.city || null,
+      shippingDistrict: ship.district || null,
+      subtotal: order.subtotal,
+      shippingFee: order.shippingFee,
+      discountAmount: order.discountAmount,
+      taxAmount: order.taxAmount,
+      total: order.total,
+      currency: order.currency,
+      shippingProvider: order.shippingProvider,
+      items: (order.items || []).map((item) => ({
+        id: item.id,
+        productName: item.productName,
+        variantLabel: item.variantLabel,
+        grindLabel: item.grindLabel,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        lineTotal: item.lineTotal,
+      })),
+      shipments: (order.shipments || []).map((s) => ({
+        id: s.id,
+        provider: s.provider,
+        status: s.status,
+        trackingNumber: s.trackingNumber,
+        trackingUrl: s.trackingUrl,
+      })),
+    };
   }
 
   async updateStatus(

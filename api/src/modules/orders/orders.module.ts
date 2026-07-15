@@ -5,9 +5,10 @@ import { CheckoutController } from '@modules/orders/checkout.controller';
 import { PaymentsModule } from '@modules/payments/payments.module';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { CouponsModule } from '@modules/coupons/coupons.module';
+import { CatalogModule } from '@modules/catalog/catalog.module';
 
 @Module({
-  imports: [PaymentsModule, NotificationsModule, CouponsModule],
+  imports: [PaymentsModule, NotificationsModule, CouponsModule, CatalogModule],
   controllers: [OrdersController, CheckoutController],
   providers: [OrdersService],
   exports: [OrdersService],

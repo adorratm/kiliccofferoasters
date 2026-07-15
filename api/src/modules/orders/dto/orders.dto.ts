@@ -125,3 +125,20 @@ export class OrderQueryDto {
   @Max(100)
   limit?: number;
 }
+
+export class GuestOrderLookupDto {
+  @ApiProperty({ example: 'KLC-20260716-ABCD' })
+  @IsString()
+  @MaxLength(40)
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  orderNumber!: string;
+
+  @ApiProperty()
+  @IsEmail()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
+  email!: string;
+}

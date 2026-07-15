@@ -17,10 +17,14 @@ import {
   paginateResult,
   PaginatedResult,
 } from '@common/utils/pagination';
+import { LowStockService } from '@modules/catalog/low-stock.service';
 
 @Injectable()
 export class ProductsService {
-  constructor(@InjectEntityManager() private readonly em: EntityManager) {}
+  constructor(
+    @InjectEntityManager() private readonly em: EntityManager,
+    private readonly lowStock: LowStockService,
+  ) {}
 
   async findAllPublic(
     query: ProductQueryDto = {},
@@ -189,6 +193,7 @@ export class ProductsService {
     if (variants?.length) {
       await this.syncVariants(saved.id, variants);
     }
+    await this.safeLowStockCheck(saved.id);
     return this.findById(saved.id);
   }
 
@@ -216,6 +221,7 @@ export class ProductsService {
     if (variants !== undefined) {
       await this.syncVariants(product.id, variants);
     }
+    await this.safeLowStockCheck(product.id);
     return this.findById(product.id);
   }
 
@@ -264,5 +270,13 @@ export class ProductsService {
   async remove(id: string): Promise<void> {
     const product = await this.findById(id);
     await this.em.remove(product);
+  }
+
+  private async safeLowStockCheck(productId: string): Promise<void> {
+    try {
+      await this.lowStock.checkAndAlert(productId);
+    } catch {
+      // stok kaydı asıl işlem; bildirim hatası checkout'u bozmasın
+    }
   }
 }

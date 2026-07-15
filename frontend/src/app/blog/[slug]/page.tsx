@@ -8,6 +8,7 @@ import { productImage } from "@/lib/format";
 import {
   JsonLd,
   blogPostJsonLd,
+  breadcrumbJsonLd,
   buildBlogPostMetadata,
 } from "@/lib/seo";
 
@@ -57,6 +58,13 @@ export default async function BlogPostPage({ params }: Props) {
   return (
     <article>
       <JsonLd data={blogPostJsonLd(post, settings)} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Ana sayfa", path: "/" },
+          { name: "Blog", path: "/blog" },
+          { name: post.title, path: `/blog/${post.slug}` },
+        ])}
+      />
 
       <section className="relative min-h-[52vh] overflow-hidden border-b border-outline-variant/20 md:min-h-[62vh]">
         <Image

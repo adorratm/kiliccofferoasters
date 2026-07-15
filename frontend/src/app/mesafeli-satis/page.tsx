@@ -1,6 +1,7 @@
 import { LegalPage } from "@/components/LegalPage";
+import { legalMetadata } from "@/lib/legal-seo";
 
-export const metadata = { title: "Mesafeli Satış" };
+export const generateMetadata = () => legalMetadata("mesafeli-satis");
 
 export default function Page() {
   return <LegalPage slug="mesafeli-satis" />;

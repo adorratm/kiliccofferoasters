@@ -92,6 +92,8 @@ export default function MarketplacePage() {
   const [pushProductId, setPushProductId] = useState('');
   const [pushDryRun, setPushDryRun] = useState(false);
   const [pushing, setPushing] = useState(false);
+  const [syncAllBusy, setSyncAllBusy] = useState(false);
+  const [enqueueAll, setEnqueueAll] = useState(true);
 
   async function load() {
     setLoading(true);
@@ -263,6 +265,38 @@ export default function MarketplacePage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Silinemedi');
       setDeleteId(null);
+    }
+  }
+
+  async function syncAllAccounts() {
+    setSyncAllBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await api<{
+        enqueued?: boolean;
+        jobId?: string;
+        scanned?: number;
+        ok?: number;
+        failed?: number;
+      }>('/marketplace/sync-all', {
+        method: 'POST',
+        body: { mode: syncMode, dryRun, enqueue: enqueueAll },
+      });
+      if (result.enqueued) {
+        setMessage(
+          `Tüm hesaplar kuyruğa alındı (job ${result.jobId || '—'}). Bull Board’dan izleyebilirsin.`,
+        );
+      } else {
+        setMessage(
+          `Toplu sync: ${result.ok ?? 0} ok / ${result.failed ?? 0} hata (taranan ${result.scanned ?? 0})`,
+        );
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Toplu sync başarısız');
+    } finally {
+      setSyncAllBusy(false);
     }
   }
 
@@ -466,6 +500,24 @@ export default function MarketplacePage() {
           label="Dry-run"
           description="DB’ye yazmadan dene"
         />
+        <Checkbox
+          checked={enqueueAll}
+          onChange={setEnqueueAll}
+          label="Kuyruğa al"
+          description="Toplu sync BullMQ’ya gider"
+        />
+        <button
+          type="button"
+          disabled={syncAllBusy}
+          onClick={() => void syncAllAccounts()}
+          className="border border-accent px-4 py-2 text-sm text-accent hover:bg-accent hover:text-white disabled:opacity-50"
+        >
+          {syncAllBusy ? 'Sync…' : 'Tüm aktif hesapları sync'}
+        </button>
+        <p className="w-full text-xs text-muted">
+          Otomatik sync varsayılan her 60 dk (MARKETPLACE_SYNC_INTERVAL_MINUTES).
+          Kuyruk: Bull Board → marketplace-sync
+        </p>
       </div>
 
       <form

@@ -64,7 +64,18 @@ function SuccessContent() {
               >
                 Sipariş detayı
               </Link>
-            ) : null}
+            ) : (
+              <Link
+                href={
+                  orderNumber
+                    ? `/siparis-sorgula?orderNumber=${encodeURIComponent(orderNumber)}`
+                    : "/siparis-sorgula"
+                }
+                className="btn-cta px-6 py-3 text-xs"
+              >
+                Siparişi sorgula
+              </Link>
+            )}
             {loggedIn ? (
               <Link
                 href="/hesabim"
@@ -77,7 +88,7 @@ function SuccessContent() {
                 href="/giris"
                 className="border border-outline-variant/40 px-6 py-3 font-meta text-[10px] uppercase tracking-widest hover:border-primary"
               >
-                Giriş yap / takip et
+                Giriş yap
               </Link>
             )}
             <Link

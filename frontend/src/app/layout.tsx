@@ -4,7 +4,12 @@ import { CookieBanner } from "@/components/CookieBanner";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getSiteSettings } from "@/lib/cms";
-import { JsonLd, buildSiteMetadata, organizationJsonLd } from "@/lib/seo";
+import {
+  JsonLd,
+  buildSiteMetadata,
+  organizationJsonLd,
+  websiteJsonLd,
+} from "@/lib/seo";
 import "./globals.css";
 
 const anton = Anton({
@@ -55,6 +60,7 @@ export default async function RootLayout({
       </head>
       <body className="flex min-h-full flex-col bg-background text-on-background antialiased">
         <JsonLd data={organizationJsonLd(settings)} />
+        <JsonLd data={websiteJsonLd(settings)} />
         <SiteHeader settings={settings} />
         <main className="flex-1 pt-20">{children}</main>
         <SiteFooter settings={settings} />

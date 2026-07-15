@@ -10,6 +10,8 @@ import { EntityManager } from 'typeorm';
 import { Request, Response, NextFunction } from 'express';
 import {
   QUEUE_ABANDONED_CART,
+  QUEUE_LOW_STOCK,
+  QUEUE_MARKETPLACE_SYNC,
   QUEUE_NOTIFICATIONS,
   QUEUE_SHIPPING_POLL,
 } from '@modules/queues/queue.constants';
@@ -110,6 +112,8 @@ function createBullBoardAuth(
       { name: QUEUE_NOTIFICATIONS },
       { name: QUEUE_SHIPPING_POLL },
       { name: QUEUE_ABANDONED_CART },
+      { name: QUEUE_MARKETPLACE_SYNC },
+      { name: QUEUE_LOW_STOCK },
     ),
     BullBoardModule.forRootAsync({
       imports: [ConfigModule, JwtModule],
@@ -134,6 +138,14 @@ function createBullBoardAuth(
     }),
     BullBoardModule.forFeature({
       name: QUEUE_ABANDONED_CART,
+      adapter: BullMQAdapter,
+    }),
+    BullBoardModule.forFeature({
+      name: QUEUE_MARKETPLACE_SYNC,
+      adapter: BullMQAdapter,
+    }),
+    BullBoardModule.forFeature({
+      name: QUEUE_LOW_STOCK,
       adapter: BullMQAdapter,
     }),
     NotificationsModule,

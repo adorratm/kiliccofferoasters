@@ -18,6 +18,7 @@ import {
 import { OrdersService } from '@modules/orders/orders.service';
 import {
   CreateOrderDto,
+  GuestOrderLookupDto,
   OrderQueryDto,
   UpdateOrderStatusDto,
 } from '@modules/orders/dto/orders.dto';
@@ -42,6 +43,13 @@ export class OrdersController {
     @Headers('x-session-id') sessionId?: string,
   ) {
     return this.ordersService.createFromCart(dto, user?.id, sessionId);
+  }
+
+  @Public()
+  @Post('lookup')
+  @ApiOperation({ summary: 'Misafir sipariş sorgulama (sipariş no + e-posta)' })
+  lookup(@Body() dto: GuestOrderLookupDto) {
+    return this.ordersService.lookupGuest(dto);
   }
 
   @Get('me')

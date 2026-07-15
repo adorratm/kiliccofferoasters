@@ -14,9 +14,12 @@ export class AdminController {
   @Get('stats')
   @ApiOperation({ summary: 'Admin dashboard istatistikleri' })
   stats(@Query('lowStock') lowStock?: string) {
-    const threshold = lowStock ? Number(lowStock) : 10;
+    if (lowStock === undefined || lowStock === '') {
+      return this.adminService.getStats();
+    }
+    const threshold = Number(lowStock);
     return this.adminService.getStats(
-      Number.isFinite(threshold) ? threshold : 10,
+      Number.isFinite(threshold) ? threshold : undefined,
     );
   }
 }

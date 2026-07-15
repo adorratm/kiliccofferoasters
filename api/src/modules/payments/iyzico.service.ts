@@ -18,6 +18,7 @@ import {
 } from '@modules/payments/dto/payments.dto';
 import { NotificationsService } from '@modules/notifications/notifications.service';
 import { statusLabel } from '@modules/notifications/notification.templates';
+import { InventoryService } from '@modules/catalog/inventory.service';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Iyzipay = require('iyzipay');
@@ -30,6 +31,7 @@ export class IyzicoService {
     @InjectEntityManager() private readonly em: EntityManager,
     private readonly config: ConfigService,
     private readonly notifications: NotificationsService,
+    private readonly inventory: InventoryService,
   ) {
     const apiKey = this.config.get<string>('iyzico.apiKey') || '';
     const secretKey = this.config.get<string>('iyzico.secretKey') || '';
@@ -263,6 +265,7 @@ export class IyzicoService {
       await this.em.save(payment.order);
 
       if (success && previous !== OrderStatus.PAID) {
+        await this.inventory.decrementForPaidOrder(payment.order.id);
         await this.notifications.enqueueOrderStatus(
           payment.order.id,
           'order_paid',

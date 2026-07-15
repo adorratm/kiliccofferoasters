@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Reveal } from "@/components/Reveal";
@@ -23,7 +24,11 @@ export default function TrackingLandingPage() {
         </div>
         <h1 className="font-display text-4xl md:text-6xl">Kargo Takip</h1>
         <p className="mt-4 max-w-lg font-meta text-xs uppercase leading-relaxed text-secondary">
-          Sipariş e-postanızdaki veya hesabınızdaki takip kodunu girin.
+          Sipariş e-postanızdaki veya hesabınızdaki takip kodunu girin. Sipariş
+          numaranız mı var?{" "}
+          <Link href="/siparis-sorgula" className="text-primary underline">
+            Sipariş sorgula
+          </Link>
         </p>
       </div>
 

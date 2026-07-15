@@ -100,9 +100,41 @@ export class NotificationsService {
     });
   }
 
+  async enqueueLowStockAlert(
+    row: {
+      productId: string;
+      variantId: string | null;
+      name: string;
+      sku: string | null;
+      weightLabel: string | null;
+      stock: number;
+    },
+    emails: string[],
+  ) {
+    for (const email of emails) {
+      const payload: NotificationJobPayload = {
+        template: 'low_stock',
+        channels: ['email'],
+        recipientEmail: email,
+        context: { ...row },
+      };
+      await this.notifyQueue.add('low_stock', payload, {
+        attempts: 2,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 50,
+        removeOnFail: 100,
+      });
+    }
+  }
+
   async processJob(payload: NotificationJobPayload): Promise<void> {
     if (payload.template === 'abandoned_cart') {
       await this.processAbandonedCart(payload);
+      return;
+    }
+
+    if (payload.template === 'low_stock') {
+      await this.processLowStock(payload);
       return;
     }
 
@@ -268,6 +300,71 @@ export class NotificationsService {
       const subject = 'Sepetinizde kahve sizi bekliyor';
       const html = `<p>Merhaba ${name},</p><p>Sepetinizde <strong>${itemCount}</strong> ürün kaldı. Siparişinizi tamamlayın — taze kavrumlar tükenmeden.</p><p><a href="${cartUrl}">Sepete dön</a></p><p style="color:#888;font-size:12px;margin-top:24px">Kılıç Coffee Roasters · Torbalı / İzmir</p>`;
       const text = `Merhaba ${name}, sepetinizde ${itemCount} ürün var: ${cartUrl}`;
+      const result = await this.email.send({
+        to: email,
+        subject,
+        html,
+        text,
+      });
+      log.status = NotificationStatus.SENT;
+      log.providerMessageId = result.id ?? null;
+      await this.em.save(log);
+    } catch (err) {
+      log.status = NotificationStatus.FAILED;
+      log.errorMessage = err instanceof Error ? err.message : String(err);
+      await this.em.save(log);
+      throw err;
+    }
+  }
+
+  private async processLowStock(
+    payload: NotificationJobPayload,
+  ): Promise<void> {
+    const email = payload.recipientEmail;
+    if (!email) {
+      this.logger.warn('Low stock notification missing email');
+      return;
+    }
+
+    const ctx = payload.context || {};
+    const productName =
+      typeof ctx.name === 'string' ? ctx.name : 'Ürün';
+    const variantLabel =
+      typeof ctx.weightLabel === 'string' ? ctx.weightLabel : null;
+    const sku = typeof ctx.sku === 'string' ? ctx.sku : null;
+    const stock = typeof ctx.stock === 'number' ? ctx.stock : 0;
+    const productId =
+      typeof ctx.productId === 'string' ? ctx.productId : null;
+    const variantId =
+      typeof ctx.variantId === 'string' ? ctx.variantId : null;
+    const adminUrl =
+      this.config.get<string>('adminUrl') || 'http://localhost:3001';
+    const label = variantLabel
+      ? `${productName} · ${variantLabel}`
+      : productName;
+
+    const log = this.em.create(NotificationLog, {
+      channel: NotificationChannel.EMAIL,
+      recipient: email,
+      template: 'low_stock',
+      orderId: null,
+      shipmentId: null,
+      status: NotificationStatus.PENDING,
+      payload: {
+        productId,
+        variantId,
+        name: productName,
+        sku,
+        weightLabel: variantLabel,
+        stock,
+      },
+    });
+    await this.em.save(log);
+
+    try {
+      const subject = `Düşük stok: ${label} (${stock})`;
+      const html = `<p>Merhaba,</p><p><strong>${label}</strong> stok seviyesi eşik altına düştü.</p><ul><li>Stok: <strong>${stock}</strong></li>${sku ? `<li>SKU: ${sku}</li>` : ''}</ul><p><a href="${adminUrl}/urunler">Ürünleri yönet</a></p><p style="color:#888;font-size:12px;margin-top:24px">Kılıç Coffee Roasters · Admin uyarı</p>`;
+      const text = `Düşük stok: ${label} — kalan ${stock}${sku ? ` (SKU: ${sku})` : ''}. Yönet: ${adminUrl}/urunler`;
       const result = await this.email.send({
         to: email,
         subject,
