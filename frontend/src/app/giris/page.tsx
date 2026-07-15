@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { AuthField, AuthShell } from "@/components/AuthModal";
 import { login } from "@/lib/api";
 import { setToken } from "@/lib/auth";
+import { fetchCart } from "@/lib/cart";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +21,8 @@ export default function LoginPage() {
     try {
       const res = await login(email, password);
       setToken(res.accessToken);
+      // Misafir sepetini kullanıcı sepetine birleştir
+      await fetchCart().catch(() => null);
       router.push("/hesabim");
     } catch (err) {
       setError(

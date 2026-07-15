@@ -128,19 +128,11 @@ export class OrdersService {
         shippingProvider: dto.shippingProvider ?? null,
         legalAcceptances: dto.legalAcceptances ?? null,
         notes: dto.notes ?? null,
+        sourceCartId: cart!.id,
       });
       await tx.save(order);
 
-      if (couponCode) {
-        await this.coupons.applyOnOrder(
-          tx,
-          couponCode,
-          subtotal,
-          order.id,
-          dto.customerEmail,
-          userId,
-        );
-      }
+      // Kupon kullanımı ödeme PAID olunca confirm edilir (başarısız ödemede yanmasın)
 
       const orderItems = cart!.items.map((item: CartItem) => {
         const grind =
@@ -171,8 +163,7 @@ export class OrdersService {
       });
       await tx.save(payment);
 
-      await tx.remove(cart!.items);
-      await tx.remove(cart!);
+      // Sepet ödeme başarılı olunca temizlenir (PENDING_PAYMENT'da kalır)
 
       return tx.findOneOrFail(Order, {
         where: { id: order.id },

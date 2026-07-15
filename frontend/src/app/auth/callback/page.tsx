@@ -3,6 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { setToken } from "@/lib/auth";
+import { fetchCart } from "@/lib/cart";
 
 function CallbackInner() {
   const router = useRouter();
@@ -12,7 +13,9 @@ function CallbackInner() {
     const token = params.get("token");
     if (token) {
       setToken(token);
-      router.replace("/hesabim");
+      void fetchCart()
+        .catch(() => null)
+        .finally(() => router.replace("/hesabim"));
       return;
     }
     router.replace("/giris");

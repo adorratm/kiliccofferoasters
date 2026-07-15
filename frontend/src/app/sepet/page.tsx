@@ -22,9 +22,16 @@ export default function CartPage() {
 
   async function reload() {
     setLoading(true);
-    const data = await fetchCart();
-    setCart(data);
-    setLoading(false);
+    setError(null);
+    try {
+      const data = await fetchCart();
+      setCart(data);
+    } catch {
+      setCart(null);
+      setError("Sepet yüklenemedi. Bağlantıyı kontrol edip yeniden deneyin.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {

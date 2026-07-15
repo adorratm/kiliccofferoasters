@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -153,44 +152,43 @@ export class CouponsService {
     return Math.min(Math.max(0, discount), subtotal);
   }
 
-  async applyOnOrder(
-    tx: EntityManager,
-    couponCode: string | undefined | null,
-    subtotal: number,
-    orderId: string,
-    email: string,
-    userId?: string | null,
-  ): Promise<{ discountAmount: number; couponCode: string | null }> {
-    if (!couponCode?.trim()) {
-      return { discountAmount: 0, couponCode: null };
-    }
-    const preview = await this.validate(
-      { code: couponCode.trim().toUpperCase(), subtotal, email },
-      userId,
-    );
-    if (!preview.valid) {
-      throw new BadRequestException(preview.message || 'Geçersiz kupon');
-    }
-    const coupon = await tx
-      .createQueryBuilder(Coupon, 'c')
-      .setLock('pessimistic_write')
-      .where('c.code = :code', { code: preview.code })
-      .getOne();
-    if (!coupon) throw new BadRequestException('Geçersiz kupon');
+  /**
+   * Ödeme başarılı olduktan sonra kupon kullanımını kaydet.
+   * Checkout'ta yalnızca validate edilir; buraya kadar harcanmış sayılmaz.
+   */
+  async confirmRedemptionForPaidOrder(orderId: string): Promise<void> {
+    const order = await this.em.findOne(Order, { where: { id: orderId } });
+    if (!order?.couponCode) return;
 
-    const discountAmount = this.computeDiscount(coupon, subtotal);
-    coupon.usedCount += 1;
-    await tx.save(coupon);
-    await tx.save(
-      tx.create(CouponRedemption, {
-        couponId: coupon.id,
-        orderId,
-        userId: userId ?? null,
-        email: email.toLowerCase().trim(),
-        discountAmount: discountAmount.toFixed(2),
-      }),
-    );
-    return { discountAmount, couponCode: coupon.code };
+    const existing = await this.em.findOne(CouponRedemption, {
+      where: { orderId },
+    });
+    if (existing) return;
+
+    await this.em.transaction(async (tx) => {
+      const coupon = await tx
+        .createQueryBuilder(Coupon, 'c')
+        .setLock('pessimistic_write')
+        .where('c.code = :code', { code: order.couponCode })
+        .getOne();
+      if (!coupon) return;
+
+      if (coupon.maxUses != null && coupon.usedCount >= coupon.maxUses) {
+        return;
+      }
+
+      coupon.usedCount += 1;
+      await tx.save(coupon);
+      await tx.save(
+        tx.create(CouponRedemption, {
+          couponId: coupon.id,
+          orderId: order.id,
+          userId: order.userId ?? null,
+          email: order.customerEmail.toLowerCase().trim(),
+          discountAmount: order.discountAmount || '0',
+        }),
+      );
+    });
   }
 }
 

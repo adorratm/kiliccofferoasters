@@ -19,6 +19,8 @@ import {
 import { NotificationsService } from '@modules/notifications/notifications.service';
 import { statusLabel } from '@modules/notifications/notification.templates';
 import { InventoryService } from '@modules/catalog/inventory.service';
+import { CartService } from '@modules/cart/cart.service';
+import { CouponsService } from '@modules/coupons/coupons.service';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Iyzipay = require('iyzipay');
@@ -32,6 +34,8 @@ export class IyzicoService {
     private readonly config: ConfigService,
     private readonly notifications: NotificationsService,
     private readonly inventory: InventoryService,
+    private readonly carts: CartService,
+    private readonly coupons: CouponsService,
   ) {
     const apiKey = this.config.get<string>('iyzico.apiKey') || '';
     const secretKey = this.config.get<string>('iyzico.secretKey') || '';
@@ -122,11 +126,16 @@ export class IyzicoService {
       };
     }
 
+    const basketItems = this.buildBasketItems(order);
+    const basketSum = basketItems
+      .reduce((sum, item) => sum + Number(item.price), 0)
+      .toFixed(2);
+
     const request = {
       locale: Iyzipay.LOCALE.TR,
       conversationId,
-      price: order.subtotal,
-      paidPrice: order.total,
+      price: basketSum,
+      paidPrice: Number(order.total).toFixed(2),
       currency: Iyzipay.CURRENCY.TRY,
       basketId: order.orderNumber,
       paymentGroup: Iyzipay.PAYMENT_GROUP.PRODUCT,
@@ -170,13 +179,7 @@ export class IyzicoService {
           order.shippingAddress?.postalCode ||
           '34000',
       },
-      basketItems: (order.items || []).map((item) => ({
-        id: item.id,
-        name: item.productName,
-        category1: 'Coffee',
-        itemType: Iyzipay.BASKET_ITEM_TYPE.PHYSICAL,
-        price: item.lineTotal,
-      })),
+      basketItems,
     };
 
     const result = await new Promise<Record<string, unknown>>(
@@ -266,6 +269,8 @@ export class IyzicoService {
 
       if (success && previous !== OrderStatus.PAID) {
         await this.inventory.decrementForPaidOrder(payment.order.id);
+        await this.coupons.confirmRedemptionForPaidOrder(payment.order.id);
+        await this.carts.clearCartById(payment.order.sourceCartId);
         await this.notifications.enqueueOrderStatus(
           payment.order.id,
           'order_paid',
@@ -285,5 +290,70 @@ export class IyzicoService {
       orderNumber: payment.order?.orderNumber ?? null,
       orderStatus: payment.order?.status,
     };
+  }
+
+  /**
+   * iyzico: basket kalemleri toplamı `price` ile eşit olmalı.
+   * İndirim ürün kalemlerine oransal dağıtılır; kargo ayrı satır.
+   */
+  private buildBasketItems(order: Order) {
+    const shipping = Number(order.shippingFee || 0);
+    const discount = Number(order.discountAmount || 0);
+    const items = order.items || [];
+    const goodsGross = items.reduce(
+      (sum, item) => sum + Number(item.lineTotal),
+      0,
+    );
+    const goodsNet = Math.max(0, goodsGross - discount);
+
+    const basketItems: Array<{
+      id: string;
+      name: string;
+      category1: string;
+      itemType: string;
+      price: string;
+    }> = [];
+
+    if (items.length && goodsGross > 0) {
+      let allocated = 0;
+      items.forEach((item, index) => {
+        const share = Number(item.lineTotal) / goodsGross;
+        let price =
+          index === items.length - 1
+            ? Number((goodsNet - allocated).toFixed(2))
+            : Number((goodsNet * share).toFixed(2));
+        if (price < 0) price = 0;
+        allocated += price;
+        basketItems.push({
+          id: item.id,
+          name: item.productName,
+          category1: 'Coffee',
+          itemType: Iyzipay.BASKET_ITEM_TYPE.PHYSICAL,
+          price: price.toFixed(2),
+        });
+      });
+    }
+
+    if (shipping > 0) {
+      basketItems.push({
+        id: `shipping-${order.id}`,
+        name: 'Kargo',
+        category1: 'Shipping',
+        itemType: Iyzipay.BASKET_ITEM_TYPE.PHYSICAL,
+        price: shipping.toFixed(2),
+      });
+    }
+
+    if (!basketItems.length) {
+      basketItems.push({
+        id: order.id,
+        name: `Sipariş ${order.orderNumber}`,
+        category1: 'Coffee',
+        itemType: Iyzipay.BASKET_ITEM_TYPE.PHYSICAL,
+        price: Number(order.total).toFixed(2),
+      });
+    }
+
+    return basketItems;
   }
 }

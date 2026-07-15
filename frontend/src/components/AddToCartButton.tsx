@@ -11,6 +11,7 @@ type Props = {
   grindOption?: string | null;
   label?: string;
   className?: string;
+  disabled?: boolean;
 };
 
 export function AddToCartButton({
@@ -19,12 +20,16 @@ export function AddToCartButton({
   grindOption = "whole_bean",
   label = "Satın Almayı Başlat",
   className,
+  disabled = false,
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isDemoId = productId.startsWith("demo-");
+
   async function onClick() {
+    if (disabled || isDemoId) return;
     setLoading(true);
     setError(null);
     try {
@@ -50,11 +55,11 @@ export function AddToCartButton({
     <div>
       <button
         type="button"
-        disabled={loading}
+        disabled={loading || disabled || isDemoId}
         onClick={onClick}
         className={
           className ||
-          "btn-cta w-full py-6 font-display text-lg tracking-widest"
+          "btn-cta w-full py-6 font-display text-lg tracking-widest disabled:cursor-not-allowed disabled:opacity-50"
         }
       >
         {loading ? "İşleniyor…" : label}

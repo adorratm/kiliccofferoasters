@@ -38,11 +38,8 @@ export function setCartSessionId(id: string) {
 export async function fetchCart(): Promise<Cart | null> {
   const sessionId = getCartSessionId();
   if (!sessionId) return null;
-  try {
-    return await getCart(sessionId, getToken());
-  } catch {
-    return { id: "local", userId: null, sessionId, items: [] };
-  }
+  // Hata yukarı fırlatılır — boş sepet ile karıştırılmaz (login merge dahil)
+  return getCart(sessionId, getToken());
 }
 
 export async function cartAddItem(payload: {

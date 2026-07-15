@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Reveal } from "@/components/Reveal";
 import { ApiError, retryPayment } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import { redirectToPayment } from "@/lib/payment-redirect";
 
 function FailureContent() {
   const params = useSearchParams();
@@ -41,15 +42,9 @@ function FailureContent() {
           ? sessionStorage.getItem("kilic_last_order_email") || undefined
           : undefined;
       const result = await retryPayment(orderId, email, getToken());
-      if (result.paymentPageUrl) {
-        window.location.href = result.paymentPageUrl;
-        return;
+      if (!redirectToPayment(result)) {
+        setError("Ödeme yönlendirmesi alınamadı.");
       }
-      if (result.token) {
-        window.location.href = `https://sandbox-cpp.iyzipay.com/?token=${encodeURIComponent(result.token)}`;
-        return;
-      }
-      setError("Ödeme yönlendirmesi alınamadı.");
     } catch (err) {
       setError(
         err instanceof ApiError

@@ -91,6 +91,10 @@ export class Order extends BaseEntity {
   @Column({ name: 'notes', type: 'text', nullable: true })
   notes!: string | null;
 
+  /** Checkout sırasında kullanılan sepet; ödeme PAID olunca temizlenir */
+  @Column({ name: 'source_cart_id', type: 'uuid', nullable: true })
+  sourceCartId!: string | null;
+
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items!: OrderItem[];
 

@@ -10,6 +10,7 @@ import { ApiError, getOrderById, retryPayment } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { formatMoney } from "@/lib/format";
 import { orderStatusHint, shipmentStatusLabel } from "@/lib/order-status";
+import { redirectToPayment } from "@/lib/payment-redirect";
 import type { Order } from "@/lib/types";
 
 export default function OrderDetailPage() {
@@ -81,11 +82,9 @@ export default function OrderDetailPage() {
         order.customerEmail,
         token,
       );
-      if (result.paymentPageUrl) {
-        window.location.href = result.paymentPageUrl;
-        return;
+      if (!redirectToPayment(result)) {
+        setRetryError("Ödeme yönlendirmesi alınamadı.");
       }
-      setRetryError("Ödeme yönlendirmesi alınamadı.");
     } catch (err) {
       setRetryError(
         err instanceof ApiError ? err.message : "Yeniden ödeme başarısız",

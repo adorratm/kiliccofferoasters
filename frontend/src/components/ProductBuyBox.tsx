@@ -9,9 +9,11 @@ import type { Product, ProductVariant } from "@/lib/types";
 
 type Props = {
   product: Product;
+  /** API erişilemezken DEMO ürünler — sepete ekleme kapalı */
+  demoMode?: boolean;
 };
 
-export function ProductBuyBox({ product }: Props) {
+export function ProductBuyBox({ product, demoMode = false }: Props) {
   const variants = useMemo(
     () => (product.variants || []).filter((v) => v.isActive !== false),
     [product.variants],
@@ -24,6 +26,10 @@ export function ProductBuyBox({ product }: Props) {
   const selected: ProductVariant | undefined =
     variants.find((v) => v.id === variantId) || variants[0];
   const price = selected?.price ?? product.basePrice;
+  const stock =
+    selected != null ? selected.stock : product.stock;
+  const outOfStock = stock <= 0;
+  const disabled = demoMode || outOfStock;
 
   return (
     <div className="space-y-6">
@@ -47,6 +53,7 @@ export function ProductBuyBox({ product }: Props) {
                   }`}
                 >
                   {v.weightLabel}
+                  {v.stock <= 0 ? " · Yok" : ""}
                 </button>
               );
             })}
@@ -87,6 +94,9 @@ export function ProductBuyBox({ product }: Props) {
           <p className="font-display text-3xl">
             {formatMoney(price, product.currency)}
           </p>
+          <p className="mt-1 font-meta text-[10px] uppercase text-secondary">
+            Stok {outOfStock ? "yok" : `[${stock}]`}
+          </p>
         </div>
         {selected?.weightLabel ? (
           <p className="font-meta text-[11px] uppercase text-secondary">
@@ -95,12 +105,26 @@ export function ProductBuyBox({ product }: Props) {
         ) : null}
       </div>
 
+      {demoMode ? (
+        <p className="font-meta text-[10px] uppercase text-error">
+          Demo ürün — API bağlantısı olmadan sepete eklenemez
+        </p>
+      ) : null}
+
       <div className="flex items-stretch gap-3">
         <div className="flex-1">
           <AddToCartButton
             productId={product.id}
             variantId={selected?.id}
             grindOption={grind}
+            disabled={disabled}
+            label={
+              demoMode
+                ? "Demo mod"
+                : outOfStock
+                  ? "Stokta yok"
+                  : "Satın Almayı Başlat"
+            }
           />
         </div>
         <FavoriteButton productId={product.id} size="lg" />

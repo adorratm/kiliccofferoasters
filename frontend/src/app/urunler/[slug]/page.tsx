@@ -42,6 +42,8 @@ export default async function ProductDetailPage({ params }: Props) {
 
   if (!product) notFound();
 
+  const isDemo = product.id.startsWith("demo-");
+
   const images =
     product.gallery?.length > 0
       ? product.gallery
@@ -104,8 +106,8 @@ export default async function ProductDetailPage({ params }: Props) {
                   Configure / Buy
                 </div>
                 <p className="font-meta text-xs uppercase text-on-surface-variant">
-                  Ağırlık · öğütme · stok{" "}
-                  {product.stock > 0 ? `[${product.stock}]` : "[0]"}
+                  Ağırlık · öğütme · stok
+                  {isDemo ? " · demo" : ""}
                 </p>
                 {(product.ratingCount ?? 0) > 0 ? (
                   <p className="mt-2 font-meta text-xs uppercase tracking-widest text-primary">
@@ -147,7 +149,7 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
 
           <div>
-            <ProductBuyBox product={product} />
+            <ProductBuyBox product={product} demoMode={isDemo} />
             <div className="mt-4 flex justify-between font-meta text-[10px] uppercase tracking-widest text-on-surface-variant">
               <span>Secure_Protocol_V3</span>
               <span>Global_Logistics_Enabled</span>

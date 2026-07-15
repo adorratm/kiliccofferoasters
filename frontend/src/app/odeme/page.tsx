@@ -77,7 +77,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     const token = getToken();
     Promise.all([
-      fetchCart(),
+      fetchCart().catch(() => null),
       getShippingProviders(),
       token ? getMyAddresses(token) : Promise.resolve([] as Address[]),
       token ? getMe(token).catch(() => null) : Promise.resolve(null),
@@ -249,23 +249,10 @@ export default function CheckoutPage() {
         }
       }
 
-      if (result.paymentPageUrl) {
-        window.location.href = result.paymentPageUrl;
-        return;
+      const { redirectToPayment } = await import("@/lib/payment-redirect");
+      if (!redirectToPayment(result)) {
+        setError("Ödeme yönlendirmesi alınamadı.");
       }
-      if (result.token) {
-        window.location.href = `https://sandbox-cpp.iyzipay.com/?token=${encodeURIComponent(result.token)}`;
-        return;
-      }
-      if (result.checkoutFormContent) {
-        const win = window.open("", "_self");
-        if (win) {
-          win.document.write(result.checkoutFormContent);
-          win.document.close();
-        }
-        return;
-      }
-      setError("Ödeme yönlendirmesi alınamadı.");
     } catch (err) {
       setError(
         err instanceof Error
