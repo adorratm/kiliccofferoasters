@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getProducts } from "@/lib/api";
+import { getBlogSlugs, getProducts } from "@/lib/api";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -7,6 +7,7 @@ const SITE_URL =
 const STATIC_ROUTES = [
   "",
   "/urunler",
+  "/blog",
   "/iletisim",
   "/giris",
   "/kayit",
@@ -20,14 +21,17 @@ const STATIC_ROUTES = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const products = await getProducts();
+  const [products, blogSlugs] = await Promise.all([
+    getProducts(),
+    getBlogSlugs(),
+  ]);
   const now = new Date();
 
   const staticEntries: MetadataRoute.Sitemap = STATIC_ROUTES.map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified: now,
     changeFrequency: path === "" ? "daily" : "weekly",
-    priority: path === "" ? 1 : 0.7,
+    priority: path === "" ? 1 : path === "/blog" ? 0.8 : 0.7,
   }));
 
   const productEntries: MetadataRoute.Sitemap = products.map((product) => ({
@@ -37,5 +41,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticEntries, ...productEntries];
+  const blogEntries: MetadataRoute.Sitemap = blogSlugs.map((post) => ({
+    url: `${SITE_URL}/blog/${post.slug}`,
+    lastModified: post.updatedAt
+      ? new Date(post.updatedAt)
+      : post.publishedAt
+        ? new Date(post.publishedAt)
+        : now,
+    changeFrequency: "monthly",
+    priority: 0.75,
+  }));
+
+  return [...staticEntries, ...productEntries, ...blogEntries];
 }

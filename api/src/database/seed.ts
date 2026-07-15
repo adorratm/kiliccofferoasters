@@ -6,6 +6,7 @@ import { AdminAllowlist } from '@entities/admin-allowlist.entity';
 import { Category } from '@entities/category.entity';
 import { Product } from '@entities/product.entity';
 import { LegalDocument } from '@entities/legal-document.entity';
+import { BlogPost } from '@entities/blog-post.entity';
 import { ShippingProviderConfig } from '@entities/shipping-provider-config.entity';
 import { ShippingProviderCode } from '@entities/shipment.entity';
 import { SiteSetting } from '@entities/site-setting.entity';
@@ -166,6 +167,56 @@ async function seed() {
     }
   }
 
+  const blogPosts = [
+    {
+      slug: 'birinci-crack-nedir',
+      title: 'Birinci Crack Nedir?',
+      excerpt:
+        'Kavrumda birinci crack anı, tat profilinin yönünü belirleyen kritik bir eşiktir.',
+      content: `<p>Birinci crack, çekirdeğin içinde biriken buharın hücre duvarlarını aşmasıyla duyulan fiziksel kırılmadır. Bu an, kavrumun “geliştirme” fazına giriş kapısıdır.</p>
+<p>Çok erken drop yapmak asiditeyi canlı bırakır; fazla uzatmak gövdeyi artırırken çiçeksi notaları baskılar. Torbalı’daki kavurularımızda crack zamanlamasını batch bazında log’larız.</p>
+<p>Profillerinizi tekrarlanabilir kılmak için crack zamanı, drop sıcaklığı ve airflow değerlerini birlikte okuyun — tek başına süre yetmez.</p>`,
+      coverImageUrl:
+        'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=1400&q=80',
+      authorName: 'Kılıç Coffee Roasters',
+      tags: ['kavrum', 'teknik'],
+      seoTitle: 'Birinci Crack Nedir? | Kavrum Tekniği',
+      seoDescription:
+        'Specialty kahvede birinci crack nedir, neden önemlidir ve tat profilini nasıl etkiler?',
+    },
+    {
+      slug: 'filtre-kahve-ogutme-ipuclari',
+      title: 'Filtre Kahve İçin Öğütme İpuçları',
+      excerpt:
+        'Doğru öğütme boyutu, ekstraksiyonu dengeler; ince değil, kararlı olmalı.',
+      content: `<p>Filtre demlemede öğütme, sıcaklık ve oran kadar belirleyicidir. Çok ince öğütme acılaştırır; çok kalın öğütme ise ekşi ve zayıf bir fincan üretir.</p>
+<p>Önerilen başlangıç: V60 için orta-ince, batch brew için biraz daha kaba. Aynı kahveyi farklı ekipmanlarda kullanırken önce oranları sabitleyin, sonra öğütmeyi ince ayarlayın.</p>
+<p>Yirgacheffe gibi light kavrumlarda biraz daha ince giderek floral notaları öne çıkarabilirsiniz; Brazil gibi gövdeli kahvelerde kaba tarafı tercih edin.</p>`,
+      coverImageUrl:
+        'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1400&q=80',
+      authorName: 'Kılıç Coffee Roasters',
+      tags: ['demleme', 'filtre'],
+      seoTitle: 'Filtre Kahve Öğütme İpuçları',
+      seoDescription:
+        'Filtre demleme için öğütme boyutu, oran ve ekipman bazlı pratik ayar önerileri.',
+    },
+  ];
+
+  for (const post of blogPosts) {
+    const exists = await em.findOne(BlogPost, { where: { slug: post.slug } });
+    if (!exists) {
+      await em.save(
+        em.create(BlogPost, {
+          ...post,
+          isPublished: true,
+          publishedAt: new Date(),
+          locale: 'tr',
+        }),
+      );
+      console.log('Blog:', post.slug);
+    }
+  }
+
   const shippingProviders: {
     provider: ShippingProviderCode;
     displayName: string;
@@ -215,6 +266,34 @@ async function seed() {
         }),
       );
       console.log('Site setting:', key);
+    } else if (key === 'navigation') {
+      const nav = (exists.value || {}) as {
+        header?: { href: string; label: string }[];
+        footerNav?: { href: string; label: string }[];
+        footerLegal?: { href: string; label: string }[];
+      };
+      let changed = false;
+      if (nav.header && !nav.header.some((l) => l.href === '/blog')) {
+        const idx = nav.header.findIndex((l) => l.href === '/urunler');
+        nav.header.splice(idx >= 0 ? idx + 1 : nav.header.length, 0, {
+          href: '/blog',
+          label: 'Blog',
+        });
+        changed = true;
+      }
+      if (nav.footerNav && !nav.footerNav.some((l) => l.href === '/blog')) {
+        const idx = nav.footerNav.findIndex((l) => l.href === '/urunler');
+        nav.footerNav.splice(idx >= 0 ? idx + 1 : nav.footerNav.length, 0, {
+          href: '/blog',
+          label: 'Blog',
+        });
+        changed = true;
+      }
+      if (changed) {
+        exists.value = nav;
+        await em.save(exists);
+        console.log('Site setting navigation: +blog');
+      }
     }
   }
 

@@ -84,11 +84,13 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   navigation: {
     header: [
       { href: "/urunler", label: "Kavrumlar" },
+      { href: "/blog", label: "Blog" },
       { href: "/iletisim", label: "İletişim" },
       { href: "/takip/ornek", label: "Takip" },
     ],
     footerNav: [
       { href: "/urunler", label: "Kavrumlar" },
+      { href: "/blog", label: "Blog" },
       { href: "/iletisim", label: "İletişim" },
       { href: "/sepet", label: "Sepet" },
       { href: "/hesabim", label: "Hesabım" },

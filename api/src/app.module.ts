@@ -25,6 +25,7 @@ import { QueuesModule } from '@modules/queues/queues.module';
 import { TrackingModule } from '@modules/tracking/tracking.module';
 import { AddressesModule } from '@modules/addresses/addresses.module';
 import { SearchModule } from '@modules/search/search.module';
+import { BlogModule } from '@modules/blog/blog.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { SearchModule } from '@modules/search/search.module';
     PaymentsModule,
     MarketplaceModule,
     LegalModule,
+    BlogModule,
     ContactModule,
     StorageModule,
     CmsModule,

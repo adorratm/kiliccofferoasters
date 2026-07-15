@@ -9,6 +9,7 @@ import { MediaAsset } from '@entities/media-asset.entity';
 import { NewsletterSubscriber } from '@entities/newsletter-subscriber.entity';
 import { LegalDocument } from '@entities/legal-document.entity';
 import { ContentSection } from '@entities/content-section.entity';
+import { BlogPost } from '@entities/blog-post.entity';
 
 export type SearchHit = {
   type: string;
@@ -35,7 +36,7 @@ export class SearchService {
     const like = `%${term}%`;
     const per = Math.min(limit, 12);
 
-    const [products, sections, legal] = await Promise.all([
+    const [products, sections, legal, posts] = await Promise.all([
       this.em
         .createQueryBuilder(Product, 'p')
         .where('p.is_active = true')
@@ -60,6 +61,16 @@ export class SearchService {
         .where('d.is_published = true')
         .andWhere(`(d.title ILIKE :like OR d.slug ILIKE :like)`, { like })
         .take(Math.min(per, 5))
+        .getMany(),
+      this.em
+        .createQueryBuilder(BlogPost, 'b')
+        .where('b.is_published = true')
+        .andWhere(
+          `(b.title ILIKE :like OR b.slug ILIKE :like OR COALESCE(b.excerpt,'') ILIKE :like OR COALESCE(b.author_name,'') ILIKE :like)`,
+          { like },
+        )
+        .orderBy('b.published_at', 'DESC')
+        .take(per)
         .getMany(),
     ]);
 
@@ -107,6 +118,20 @@ export class SearchService {
       });
     }
 
+    if (posts.length) {
+      groups.push({
+        type: 'blog',
+        label: 'Blog',
+        items: posts.map((p) => ({
+          type: 'blog',
+          id: p.id,
+          title: p.title,
+          subtitle: p.excerpt || p.authorName || undefined,
+          href: `/blog/${p.slug}`,
+        })),
+      });
+    }
+
     return { q: term, groups };
   }
 
@@ -126,6 +151,7 @@ export class SearchService {
       media,
       newsletter,
       legal,
+      posts,
     ] = await Promise.all([
       this.em
         .createQueryBuilder(Product, 'p')
@@ -176,6 +202,15 @@ export class SearchService {
       this.em
         .createQueryBuilder(LegalDocument, 'd')
         .where(`(d.title ILIKE :like OR d.slug ILIKE :like)`, { like })
+        .take(per)
+        .getMany(),
+      this.em
+        .createQueryBuilder(BlogPost, 'b')
+        .where(
+          `(b.title ILIKE :like OR b.slug ILIKE :like OR COALESCE(b.excerpt,'') ILIKE :like)`,
+          { like },
+        )
+        .orderBy('b.updated_at', 'DESC')
         .take(per)
         .getMany(),
     ]);
@@ -270,6 +305,19 @@ export class SearchService {
           title: d.title,
           subtitle: d.slug,
           href: '/sozlesmeler',
+        })),
+      });
+    }
+    if (posts.length) {
+      groups.push({
+        type: 'blog',
+        label: 'Blog',
+        items: posts.map((p) => ({
+          type: 'blog',
+          id: p.id,
+          title: p.title,
+          subtitle: p.isPublished ? 'published' : 'draft',
+          href: '/blog',
         })),
       });
     }

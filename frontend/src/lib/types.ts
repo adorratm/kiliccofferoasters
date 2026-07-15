@@ -205,6 +205,33 @@ export type LegalDocument = {
   publishedAt?: string | null;
 };
 
+export type BlogPost = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  content: string;
+  coverImageUrl: string | null;
+  authorName: string | null;
+  tags: string[];
+  seoTitle: string | null;
+  seoDescription: string | null;
+  isPublished: boolean;
+  publishedAt: string | null;
+  locale: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type BlogQuery = {
+  q?: string;
+  tag?: string;
+  sort?: "publishedAt" | "createdAt" | "updatedAt" | "title";
+  order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+};
+
 export type CheckoutPayload = {
   customerEmail: string;
   customerName: string;

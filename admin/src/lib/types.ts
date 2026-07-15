@@ -99,6 +99,24 @@ export type LegalDocument = {
   locale?: string;
 };
 
+export type BlogPost = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt?: string | null;
+  content: string;
+  coverImageUrl?: string | null;
+  authorName?: string | null;
+  tags?: string[];
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  isPublished: boolean;
+  publishedAt?: string | null;
+  locale?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type ContactMessage = {
   id: string;
   senderName: string;

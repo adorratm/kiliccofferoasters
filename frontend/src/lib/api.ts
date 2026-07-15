@@ -2,6 +2,8 @@ import type {
   Address,
   AddressPayload,
   AuthResponse,
+  BlogPost,
+  BlogQuery,
   Cart,
   Category,
   CheckoutPayload,
@@ -360,6 +362,62 @@ export async function getLegalDocument(
     return await apiFetch<LegalDocument>(`/legal/${encodeURIComponent(slug)}`);
   } catch {
     return null;
+  }
+}
+
+export async function getBlogPosts(
+  params?: BlogQuery,
+): Promise<Paginated<BlogPost>> {
+  try {
+    const qs = toQuery({
+      q: params?.q,
+      tag: params?.tag,
+      sort: params?.sort,
+      order: params?.order,
+      page: params?.page ?? 1,
+      limit: params?.limit ?? 12,
+    });
+    const data = await apiFetch<BlogPost[] | Paginated<BlogPost>>(
+      `/blog${qs}`,
+    );
+    if (Array.isArray(data)) {
+      return {
+        items: data,
+        total: data.length,
+        page: 1,
+        limit: data.length || 12,
+        totalPages: 1,
+      };
+    }
+    return {
+      items: data.items ?? [],
+      total: data.total ?? 0,
+      page: data.page ?? 1,
+      limit: data.limit ?? 12,
+      totalPages: data.totalPages ?? 1,
+    };
+  } catch {
+    return { items: [], total: 0, page: 1, limit: 12, totalPages: 1 };
+  }
+}
+
+export async function getBlogPostBySlug(
+  slug: string,
+): Promise<BlogPost | null> {
+  try {
+    return await apiFetch<BlogPost>(`/blog/${encodeURIComponent(slug)}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function getBlogSlugs(): Promise<
+  { slug: string; updatedAt?: string; publishedAt?: string | null }[]
+> {
+  try {
+    return await apiFetch(`/blog/slugs`);
+  } catch {
+    return [];
   }
 }
 

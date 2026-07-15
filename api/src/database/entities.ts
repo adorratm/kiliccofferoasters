@@ -22,6 +22,7 @@ import { MediaAsset } from '@entities/media-asset.entity';
 import { SiteSetting } from '@entities/site-setting.entity';
 import { ContentSection } from '@entities/content-section.entity';
 import { NotificationLog } from '@entities/notification-log.entity';
+import { BlogPost } from '@entities/blog-post.entity';
 
 export const ALL_ENTITIES = [
   User,
@@ -48,4 +49,5 @@ export const ALL_ENTITIES = [
   SiteSetting,
   ContentSection,
   NotificationLog,
+  BlogPost,
 ];

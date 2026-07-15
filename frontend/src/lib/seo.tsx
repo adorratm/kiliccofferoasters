@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { SiteSettings } from "@/lib/cms";
-import type { Product } from "@/lib/types";
+import type { BlogPost, Product } from "@/lib/types";
 
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -73,6 +73,78 @@ export function buildProductMetadata(
   };
 }
 
+export function buildBlogIndexMetadata(settings: SiteSettings): Metadata {
+  const title = "Blog";
+  const description =
+    "Kavrum teknikleri, demleme notları ve Kılıç Coffee Roasters günlüklerinden yazılar.";
+  const url = `${SITE_URL}/blog`;
+  return {
+    title,
+    description,
+    keywords: [
+      ...(settings.seo.keywords || []),
+      "blog",
+      "kahve blog",
+      "specialty coffee",
+    ],
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      url,
+      title: `${title} | ${settings.brand.name}`,
+      description,
+      images: settings.seo.ogImage
+        ? [{ url: settings.seo.ogImage, alt: settings.brand.name }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: settings.seo.ogImage ? [settings.seo.ogImage] : undefined,
+    },
+  };
+}
+
+export function buildBlogPostMetadata(
+  post: BlogPost,
+  settings: SiteSettings,
+): Metadata {
+  const title = post.seoTitle || post.title;
+  const description =
+    post.seoDescription ||
+    post.excerpt ||
+    post.content.replace(/<[^>]+>/g, "").slice(0, 160) ||
+    settings.seo.description;
+  const image = post.coverImageUrl || settings.seo.ogImage;
+  const url = `${SITE_URL}/blog/${post.slug}`;
+
+  return {
+    title,
+    description,
+    keywords: [...(settings.seo.keywords || []), ...(post.tags || [])],
+    authors: post.authorName ? [{ name: post.authorName }] : undefined,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      url,
+      title,
+      description,
+      publishedTime: post.publishedAt || undefined,
+      modifiedTime: post.updatedAt || undefined,
+      authors: post.authorName ? [post.authorName] : undefined,
+      tags: post.tags,
+      images: image ? [{ url: image, alt: post.title }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+  };
+}
+
 export function organizationJsonLd(settings: SiteSettings) {
   const { brand, contact } = settings;
   return {
@@ -116,6 +188,35 @@ export function productJsonLd(product: Product, settings: SiteSettings) {
           : "https://schema.org/OutOfStock",
       url: `${SITE_URL}/urunler/${product.slug}`,
     },
+  };
+}
+
+export function blogPostJsonLd(post: BlogPost, settings: SiteSettings) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.excerpt || post.seoDescription || undefined,
+    image: post.coverImageUrl || settings.seo.ogImage || undefined,
+    datePublished: post.publishedAt || undefined,
+    dateModified: post.updatedAt || post.publishedAt || undefined,
+    author: {
+      "@type": "Person",
+      name: post.authorName || settings.brand.name,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: settings.brand.name,
+      logo: settings.seo.ogImage
+        ? { "@type": "ImageObject", url: settings.seo.ogImage }
+        : undefined,
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SITE_URL}/blog/${post.slug}`,
+    },
+    keywords: post.tags?.join(", ") || undefined,
+    inLanguage: post.locale || "tr",
   };
 }
 
