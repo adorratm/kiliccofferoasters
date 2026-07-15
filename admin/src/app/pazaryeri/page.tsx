@@ -9,9 +9,10 @@ import type { MarketplaceAccount, Product } from '@/lib/types';
 
 const PLATFORMS = ['trendyol', 'hepsiburada', 'n11'] as const;
 const CREDENTIAL_HINTS: Record<string, string> = {
-  trendyol: '{\n  "apiKey": "",\n  "apiSecret": "",\n  "sellerId": ""\n}',
+  trendyol:
+    '{\n  "apiKey": "",\n  "apiSecret": "",\n  "sellerId": "",\n  "storeFrontCode": "TR",\n  "brandId": "",\n  "categoryId": ""\n}',
   hepsiburada: '{\n  "merchantId": "",\n  "username": "",\n  "password": ""\n}',
-  n11: '{\n  "appKey": "",\n  "appSecret": ""\n}',
+  n11: '{\n  "appKey": "",\n  "appSecret": "",\n  "categoryId": "",\n  "shipmentTemplate": ""\n}',
 };
 
 type SyncMode = 'all' | 'stock' | 'orders';
@@ -38,6 +39,7 @@ type SyncResult = {
   orders?: {
     orders?: unknown[];
     inserted?: number;
+    imported?: number;
     mock?: boolean;
     stub?: boolean;
     message?: string;
@@ -59,6 +61,8 @@ type MpOrderRow = {
   externalOrderId: string;
   externalStatus: string;
   createdAt?: string;
+  internalOrderId?: string | null;
+  internalOrder?: { id?: string; orderNumber?: string; status?: string } | null;
   payload?: Record<string, unknown> | null;
 };
 
@@ -234,7 +238,7 @@ export default function MarketplacePage() {
           mock ? '· stub/mock' : null,
           result.stock ? `stok:${result.stock.synced ?? 0}` : null,
           result.orders
-            ? `sipariş:+${result.orders.inserted ?? 0}/${result.orders.orders?.length ?? 0}`
+            ? `sipariş:+${result.orders.inserted ?? 0}/${result.orders.orders?.length ?? 0} iç:${result.orders.imported ?? 0}`
             : null,
         ]
           .filter(Boolean)
@@ -343,7 +347,7 @@ export default function MarketplacePage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
-          Trendyol · Hepsiburada · N11 — adaptörler şu an stub (gerçek API yakında)
+          Trendyol · Hepsiburada · N11 — gerçek HTTP (credentials yoksa mock)
         </p>
         <button
           type="button"
@@ -742,6 +746,23 @@ export default function MarketplacePage() {
                             ? ` · ${new Date(o.createdAt).toLocaleString('tr-TR')}`
                             : ''}
                         </p>
+                        {o.internalOrderId ? (
+                          <p className="mt-1 text-accent">
+                            İç sipariş:{' '}
+                            <a
+                              className="underline"
+                              href={`/siparisler/${o.internalOrderId}`}
+                            >
+                              {o.internalOrder?.orderNumber ||
+                                o.internalOrderId.slice(0, 8)}
+                            </a>
+                            {o.internalOrder?.status
+                              ? ` · ${o.internalOrder.status}`
+                              : ''}
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-muted">İçe aktarılmadı</p>
+                        )}
                       </li>
                     ))}
                   </ul>

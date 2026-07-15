@@ -99,6 +99,25 @@ export default () => ({
       10,
     ),
   },
+  marketplace: {
+    trendyol: {
+      baseUrl:
+        process.env.TRENDYOL_API_BASE_URL ||
+        'https://apigw.trendyol.com/integration',
+    },
+    hepsiburada: {
+      listingBaseUrl:
+        process.env.HEPSIBURADA_LISTING_BASE_URL ||
+        'https://listing-external.hepsiburada.com',
+      omsBaseUrl:
+        process.env.HEPSIBURADA_OMS_BASE_URL ||
+        'https://oms-external.hepsiburada.com',
+    },
+    n11: {
+      baseUrl: process.env.N11_API_BASE_URL || 'https://api.n11.com',
+      integrator: process.env.N11_INTEGRATOR_NAME || 'KilicCoffeeRoasters',
+    },
+  },
   lowStock: {
     threshold: parseInt(process.env.LOW_STOCK_THRESHOLD || '10', 10),
     /** Virgülle ayrılmış ekstra alıcılar; boşsa admin allowlist + DB allowlist */

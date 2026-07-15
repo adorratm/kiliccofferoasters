@@ -25,6 +25,7 @@ import {
   SyncMarketplaceDto,
   PushMarketplaceProductDto,
 } from '@modules/marketplace/dto/marketplace.dto';
+import { MarketplaceOrderImportService } from '@modules/marketplace/marketplace-order-import.service';
 
 function maskCredentials(
   credentials: Record<string, string> | null | undefined,
@@ -40,12 +41,32 @@ function maskCredentials(
   return out;
 }
 
+function looksMasked(value: string): boolean {
+  return value.includes('****') || /^\*+$/.test(value);
+}
+
+/** Maskeli / boş değerleri mevcut credential’ların üzerine yazmaz */
+function mergeCredentials(
+  existing: Record<string, string> | null | undefined,
+  incoming: Record<string, string> | null | undefined,
+): Record<string, string> {
+  const next: Record<string, string> = { ...(existing || {}) };
+  for (const [key, value] of Object.entries(incoming || {})) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (!trimmed || looksMasked(trimmed)) continue;
+    next[key] = trimmed;
+  }
+  return next;
+}
+
 @Injectable()
 export class MarketplaceService {
   private readonly adapters: Map<MarketplacePlatform, IMarketplaceAdapter>;
 
   constructor(
     @InjectEntityManager() private readonly em: EntityManager,
+    private readonly orderImport: MarketplaceOrderImportService,
     trendyol: TrendyolAdapter,
     hepsiburada: HepsiburadaAdapter,
     n11: N11Adapter,
@@ -106,7 +127,10 @@ export class MarketplaceService {
     if (dto.storeName !== undefined) account.storeName = dto.storeName;
     if (dto.isEnabled !== undefined) account.isEnabled = dto.isEnabled;
     if (dto.credentials !== undefined) {
-      account.credentials = dto.credentials;
+      account.credentials = mergeCredentials(
+        account.credentials,
+        dto.credentials,
+      );
     }
     const saved = await this.em.save(account);
     return this.sanitize(saved);
@@ -145,6 +169,7 @@ export class MarketplaceService {
     }
     return this.em.find(MarketplaceOrder, {
       where: { accountId },
+      relations: { internalOrder: true },
       order: { createdAt: 'DESC' },
       take: 50,
     });
@@ -165,7 +190,7 @@ export class MarketplaceService {
     const dryRun = dto.dryRun === true;
     const adapter = this.getAdapter(account.platform);
     const mode = dto.mode || 'all';
-    const result: Record<string, unknown> = { dryRun, stub: true };
+    const result: Record<string, unknown> = { dryRun };
 
     try {
       if (mode === 'stock' || mode === 'all') {
@@ -195,16 +220,17 @@ export class MarketplaceService {
       if (mode === 'orders' || mode === 'all') {
         const pulled = await adapter.pullOrders(account.credentials);
         let inserted = 0;
+        let imported = 0;
         if (!dryRun) {
           for (const order of pulled.orders) {
-            const existing = await this.em.findOne(MarketplaceOrder, {
+            let row = await this.em.findOne(MarketplaceOrder, {
               where: {
                 accountId: account.id,
                 externalOrderId: order.externalOrderId,
               },
             });
-            if (!existing) {
-              const row = this.em.create(MarketplaceOrder, {
+            if (!row) {
+              row = this.em.create(MarketplaceOrder, {
                 accountId: account.id,
                 externalOrderId: order.externalOrderId,
                 externalStatus: order.externalStatus,
@@ -212,10 +238,21 @@ export class MarketplaceService {
               });
               await this.em.save(row);
               inserted += 1;
+            } else {
+              row.externalStatus = order.externalStatus;
+              row.payload = order.payload;
+              await this.em.save(row);
             }
+
+            const imp = await this.orderImport.importIfNeeded(row.id);
+            if (imp.imported) imported += 1;
           }
         }
-        result.orders = { ...pulled, inserted: dryRun ? 0 : inserted };
+        result.orders = {
+          ...pulled,
+          inserted: dryRun ? 0 : inserted,
+          imported: dryRun ? 0 : imported,
+        };
       }
 
       if (!dryRun) {
@@ -290,6 +327,13 @@ export class MarketplaceService {
 
     if (dto.dryRun) {
       return { dryRun: true, listing: null, pushed };
+    }
+
+    if (!pushed.externalListingId) {
+      throw new BadRequestException(
+        pushed.message ||
+          'Ürün gönderilemedi — externalListingId oluşmadı (platform kategori/marka bilgisi eksik olabilir)',
+      );
     }
 
     const listing = this.em.create(MarketplaceListing, {
