@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
-import { getBlogSlugs, getCategories, getProducts } from "@/lib/api";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+import { getBlogSlugs, getCategories, getProductsPaged } from "@/lib/api";
+import { SITE_URL } from "@/lib/seo";
+import type { Product } from "@/lib/types";
 
 const STATIC_ROUTES: {
   path: string;
@@ -23,9 +22,26 @@ const STATIC_ROUTES: {
   { path: "/aydinlatma-metni", changeFrequency: "yearly", priority: 0.3 },
 ];
 
+async function fetchAllProducts(): Promise<Product[]> {
+  const limit = 100;
+  const first = await getProductsPaged({ page: 1, limit }).catch(() => null);
+  if (!first?.items?.length) return [];
+  const pages = Math.max(1, first.totalPages || 1);
+  if (pages === 1) return first.items;
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, i) =>
+      getProductsPaged({ page: i + 2, limit }).catch(() => ({
+        items: [] as Product[],
+      })),
+    ),
+  );
+  return [...first.items, ...rest.flatMap((p) => p.items)];
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, blogSlugs, categories] = await Promise.all([
-    getProducts({ limit: 200 }).catch(() => []),
+    fetchAllProducts(),
     getBlogSlugs().catch(() => []),
     getCategories().catch(() => []),
   ]);

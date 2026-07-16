@@ -37,7 +37,10 @@ Kök `.env` (örnek: `.env.example`).
 | Değişken | Kullanım |
 |----------|----------|
 | `NEXT_PUBLIC_API_URL` | Tarayıcıdan API |
-| `NEXT_PUBLIC_SITE_URL` | Vitrin canonical |
+| `NEXT_PUBLIC_SITE_URL` | Vitrin canonical (production’da https domain) |
+| `NEXT_PUBLIC_ADMIN_URL` | Admin URL |
+| `NEXT_PUBLIC_CDN_URL` | CDN preconnect (opsiyonel) |
+| `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Search Console meta doğrulama (opsiyonel) |
 | `NEXT_PUBLIC_ADMIN_URL` | Admin URL |
 
 Build zamanında `NEXT_PUBLIC_*` gömülür; Docker ARG olarak geçilir.

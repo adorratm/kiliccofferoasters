@@ -7,9 +7,20 @@ import { getSiteSettings } from "@/lib/cms";
 import { productImage } from "@/lib/format";
 import { buildBlogIndexMetadata } from "@/lib/seo";
 
-export async function generateMetadata(): Promise<Metadata> {
+type Props = {
+  searchParams: Promise<{ page?: string; tag?: string }>;
+};
+
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const params = await searchParams;
   const settings = await getSiteSettings();
-  return buildBlogIndexMetadata(settings);
+  const page = Math.max(1, Number(params.page || 1) || 1);
+  return buildBlogIndexMetadata(settings, {
+    page,
+    tag: params.tag,
+  });
 }
 
 function formatDate(value?: string | null) {
@@ -24,10 +35,6 @@ function formatDate(value?: string | null) {
     return "";
   }
 }
-
-type Props = {
-  searchParams: Promise<{ page?: string; tag?: string }>;
-};
 
 export default async function BlogIndexPage({ searchParams }: Props) {
   const params = await searchParams;
