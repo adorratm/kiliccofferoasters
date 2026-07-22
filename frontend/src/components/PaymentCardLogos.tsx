@@ -30,7 +30,7 @@ export function PaymentCardLogos() {
                   title={card.label}
                   width={40}
                   height={26}
-                  className="h-[22px] w-[34px] object-contain bg-white sm:h-6 sm:w-10"
+                  className="h-5.5 w-8.5 object-contain bg-white sm:h-6 sm:w-10"
                   loading="lazy"
                 />
               </li>
