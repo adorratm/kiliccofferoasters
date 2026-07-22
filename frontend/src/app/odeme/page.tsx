@@ -338,7 +338,7 @@ export default function CheckoutPage() {
     <div className="page-shell py-16 md:py-24">
       <div className="page-enter mb-0">
         <div className="mb-2 font-meta text-xs uppercase tracking-widest text-primary">
-          Checkout / iyzico
+          Checkout / PayTR
         </div>
         <h1 className="font-display text-4xl md:text-6xl">Ödeme</h1>
         {user ? (
@@ -594,7 +594,15 @@ export default function CheckoutPage() {
                     <Link href="/kvkk" className="text-primary underline">
                       KVKK
                     </Link>{" "}
-                    metnini kabul ediyorum.
+                    metnini kabul ediyorum.{" "}
+                    <Link href="/guvenli-alisveris" className="text-primary underline">
+                      Güvenli alışveriş
+                    </Link>{" "}
+                    ve{" "}
+                    <Link href="/iptal-iade" className="text-primary underline">
+                      iade politikası
+                    </Link>{" "}
+                    bilgilendirmelerini okudum.
                   </>
                 }
               />
@@ -674,7 +682,7 @@ export default function CheckoutPage() {
               disabled={submitting}
               className="btn-cta mt-6 w-full py-4 text-xs"
             >
-              {submitting ? "Yönlendiriliyor…" : "iyzico ile Öde"}
+              {submitting ? "Yönlendiriliyor…" : "PayTR ile Güvenli Öde"}
             </button>
           </div>
           </Reveal>

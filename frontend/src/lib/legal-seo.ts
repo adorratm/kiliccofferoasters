@@ -36,6 +36,16 @@ const LEGAL_META: Record<
     description:
       "Sipariş iptal, cayma hakkı ve iade koşulları.",
   },
+  "musteri-memnuniyeti": {
+    title: "Müşteri Memnuniyeti",
+    description:
+      "Kılıç Coffee Roasters müşteri memnuniyeti politikası ve destek süreci.",
+  },
+  "guvenli-alisveris": {
+    title: "Güvenli Alışveriş",
+    description:
+      "PayTR ile güvenli ödeme, SSL ve kişisel veri koruma bilgilendirmesi.",
+  },
   "aydinlatma-metni": {
     title: "Aydınlatma Metni",
     description:

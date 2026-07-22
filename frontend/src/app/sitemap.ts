@@ -19,6 +19,8 @@ const STATIC_ROUTES: {
   { path: "/mesafeli-satis", changeFrequency: "yearly", priority: 0.3 },
   { path: "/on-bilgilendirme", changeFrequency: "yearly", priority: 0.3 },
   { path: "/iptal-iade", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/musteri-memnuniyeti", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/guvenli-alisveris", changeFrequency: "yearly", priority: 0.3 },
   { path: "/aydinlatma-metni", changeFrequency: "yearly", priority: 0.3 },
 ];
 

@@ -658,10 +658,30 @@ export default function MarketplacePage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {rows.map((row) => {
+                const selected = Boolean(
+                  showForm && form.id && form.id === row.id,
+                );
+                return (
                 <tr
                   key={row.id}
-                  className="border-t border-border-muted bg-surface"
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement | null;
+                    if (
+                      target?.closest(
+                        'button, a, input, select, textarea, label',
+                      )
+                    ) {
+                      return;
+                    }
+                    startEdit(row);
+                  }}
+                  aria-selected={selected || undefined}
+                  className={`row-motion cursor-pointer border-t border-border-muted ${
+                    selected
+                      ? 'bg-accent/15 ring-1 ring-inset ring-accent/50'
+                      : 'bg-surface hover:bg-surface-high'
+                  }`}
                 >
                   <td className="px-3 py-2 uppercase">{row.platform}</td>
                   <td className="px-3 py-2">{row.storeName}</td>
@@ -730,7 +750,8 @@ export default function MarketplacePage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

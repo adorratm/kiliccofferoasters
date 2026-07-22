@@ -109,6 +109,7 @@ function LegalPageInner() {
       title: form.title,
       content: form.content,
       version: form.version,
+      isPublished: true,
     };
     try {
       if (form.id) {
@@ -152,17 +153,64 @@ function LegalPageInner() {
     }
   }
 
+  async function syncDefaults(force = false) {
+    setError(null);
+    setMessage(null);
+    setSaving(true);
+    try {
+      const result = await api<{
+        created: string[];
+        updated: string[];
+        skipped: string[];
+      }>('/legal/documents/sync-defaults', {
+        method: 'POST',
+        body: { force },
+      });
+      const parts = [
+        result.created.length
+          ? `${result.created.length} oluşturuldu`
+          : null,
+        result.updated.length ? `${result.updated.length} güncellendi` : null,
+        result.skipped.length
+          ? `${result.skipped.length} atlandı (zaten düzenlenmiş)`
+          : null,
+      ].filter(Boolean);
+      setMessage(parts.join(' · ') || 'Senkron tamam');
+      setEditing(false);
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Varsayılan metinler yüklenemedi',
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">Yasal belge editörü</p>
-        <button
-          type="button"
-          onClick={startCreate}
-          className="btn-motion bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover"
-        >
-          Yeni belge
-        </button>
+        <p className="text-sm text-muted">
+          Yasal belge editörü — sitede görünen metinler buradan yönetilir
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void syncDefaults(false)}
+            className="btn-motion border border-border-muted px-4 py-2 text-sm text-foreground hover:bg-background disabled:opacity-50"
+            title="Eksik veya örnek içerikli belgeleri doldurur"
+          >
+            Varsayılan metinleri yükle
+          </button>
+          <button
+            type="button"
+            onClick={startCreate}
+            className="btn-motion bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover"
+          >
+            Yeni belge
+          </button>
+        </div>
       </div>
 
       {error ? (
@@ -262,6 +310,8 @@ function LegalPageInner() {
         rows={visible}
         rowKey={(r) => r.id}
         emptyMessage={loading ? 'Yükleniyor…' : 'Belge yok'}
+        selectedRowKey={editing ? form.id || null : null}
+        onRowClick={(r) => startEdit(r)}
         columns={[
           {
             key: 'slug',

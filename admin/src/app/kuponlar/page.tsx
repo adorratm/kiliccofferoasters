@@ -332,6 +332,8 @@ export default function CouponsPage() {
         rows={rows}
         rowKey={(r) => r.id}
         emptyMessage={loading ? 'Yükleniyor…' : 'Kupon yok'}
+        selectedRowKey={editing ? form.id || null : null}
+        onRowClick={(r) => startEdit(r)}
         columns={[
           {
             key: 'code',

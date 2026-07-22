@@ -342,6 +342,8 @@ function BlogAdminPageInner() {
         rows={rows}
         rowKey={(r) => r.id}
         emptyMessage={loading ? 'Yükleniyor…' : 'Yazı yok'}
+        selectedRowKey={editing ? form.id || null : null}
+        onRowClick={(r) => startEdit(r)}
         columns={[
           {
             key: 'slug',

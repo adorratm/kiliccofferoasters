@@ -94,6 +94,7 @@ function MessagesPageInner() {
           rows={visible}
           rowKey={(r) => r.id}
           emptyMessage={loading ? 'Yükleniyor…' : 'Mesaj yok'}
+          selectedRowKey={selected?.id || null}
           onRowClick={(r) => void openMessage(r)}
           columns={[
             {

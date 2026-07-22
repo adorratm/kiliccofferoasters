@@ -6,17 +6,18 @@ import {
   Req,
   Res,
   UseGuards,
+  UseFilters,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import * as passport from 'passport';
 import { AuthService } from '@modules/auth/auth.service';
 import { LoginDto, RegisterDto } from '@modules/auth/dto/auth.dto';
 import { Public } from '@common/decorators/public.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@entities/user.entity';
+import { GoogleAdminOauthFilter } from '@modules/auth/filters/google-admin-oauth.filter';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -60,7 +61,7 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Google OAuth callback' })
   googleCallback(@Req() req: Request, @Res() res: Response) {
-    return this.redirectWithToken(req.user as User, res, 'frontend');
+    this.redirectWithToken(req.user as User, res, 'frontend');
   }
 
   @Public()
@@ -73,32 +74,14 @@ export class AuthController {
 
   @Public()
   @Get('google/admin/callback')
+  @UseGuards(AuthGuard('google-admin'))
+  @UseFilters(GoogleAdminOauthFilter)
   @ApiOperation({ summary: 'Admin Google OAuth callback' })
   googleAdminCallback(@Req() req: Request, @Res() res: Response) {
-    const adminBase = (
-      this.config.get<string>('adminUrl') || 'http://localhost:3001'
-    ).replace(/\/$/, '');
-
-    return passport.authenticate(
-      'google-admin',
-      (
-        err: Error | null,
-        user: User | false,
-        info: { message?: string } | undefined,
-      ) => {
-        if (err || !user) {
-          const raw =
-            err?.message || info?.message || 'Admin girişi reddedildi';
-          const message = /allowlist/i.test(raw)
-            ? 'Bu e-posta admin allowlist’te değil'
-            : raw;
-          return res.redirect(
-            `${adminBase}/login?error=${encodeURIComponent(message)}`,
-          );
-        }
-        return this.redirectWithToken(user, res, 'admin');
-      },
-    )(req, res, (() => undefined) as NextFunction);
+    if (res.headersSent) {
+      return;
+    }
+    this.redirectWithToken(req.user as User, res, 'admin');
   }
 
   @Public()
@@ -114,7 +97,7 @@ export class AuthController {
   @UseGuards(AuthGuard('facebook'))
   @ApiOperation({ summary: 'Facebook OAuth callback' })
   facebookCallback(@Req() req: Request, @Res() res: Response) {
-    return this.redirectWithToken(req.user as User, res, 'frontend');
+    this.redirectWithToken(req.user as User, res, 'frontend');
   }
 
   @Public()
@@ -130,20 +113,23 @@ export class AuthController {
   @UseGuards(AuthGuard('apple'))
   @ApiOperation({ summary: 'Apple OAuth callback' })
   appleCallback(@Req() req: Request, @Res() res: Response) {
-    return this.redirectWithToken(req.user as User, res, 'frontend');
+    this.redirectWithToken(req.user as User, res, 'frontend');
   }
 
   private redirectWithToken(
     user: User,
     res: Response,
     target: 'frontend' | 'admin',
-  ) {
+  ): void {
+    if (res.headersSent) {
+      return;
+    }
     const { accessToken } = this.authService.buildAuthResponse(user);
     const base =
       target === 'admin'
         ? this.config.get<string>('adminUrl') || 'http://localhost:3001'
         : this.config.get<string>('frontendUrl') || 'http://localhost:3000';
     const url = `${base}/auth/callback?token=${encodeURIComponent(accessToken)}`;
-    return res.redirect(url);
+    res.redirect(url);
   }
 }

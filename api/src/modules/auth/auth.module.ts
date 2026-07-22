@@ -9,6 +9,7 @@ import { GoogleStrategy } from '@modules/auth/strategies/google.strategy';
 import { GoogleAdminStrategy } from '@modules/auth/strategies/google-admin.strategy';
 import { FacebookStrategy } from '@modules/auth/strategies/facebook.strategy';
 import { AppleStrategy } from '@modules/auth/strategies/apple.strategy';
+import { GoogleAdminOauthFilter } from '@modules/auth/filters/google-admin-oauth.filter';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AppleStrategy } from '@modules/auth/strategies/apple.strategy';
     GoogleAdminStrategy,
     FacebookStrategy,
     AppleStrategy,
+    GoogleAdminOauthFilter,
   ],
   exports: [AuthService, JwtModule],
 })

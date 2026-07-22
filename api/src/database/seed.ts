@@ -17,6 +17,7 @@ import {
   DEFAULT_HOME_SECTIONS,
   DEFAULT_SITE_SETTINGS,
 } from '@database/cms-defaults';
+import { LEGAL_DEFAULTS } from '@database/legal-defaults';
 
 config({ path: join(process.cwd(), '..', '.env') });
 config();
@@ -173,33 +174,33 @@ async function seed() {
     }
   }
 
-  const legalDocs = [
-    { slug: 'kvkk', title: 'KVKK Aydınlatma' },
-    { slug: 'cerez-politikasi', title: 'Çerez Politikası' },
-    { slug: 'mesafeli-satis', title: 'Mesafeli Satış Sözleşmesi' },
-    { slug: 'on-bilgilendirme', title: 'Ön Bilgilendirme Formu' },
-    { slug: 'iptal-iade', title: 'İptal ve İade Koşulları' },
-    { slug: 'aydinlatma-metni', title: 'Aydınlatma Metni' },
-    { slug: 'gizlilik', title: 'Gizlilik Politikası' },
-  ];
-
-  for (const doc of legalDocs) {
+  for (const [slug, meta] of Object.entries(LEGAL_DEFAULTS)) {
     const exists = await em.findOne(LegalDocument, {
-      where: { slug: doc.slug, version: '1.0' },
+      where: { slug },
     });
     if (!exists) {
       await em.save(
         em.create(LegalDocument, {
-          slug: doc.slug,
-          title: doc.title,
-          content: `<p>${doc.title} — örnek içerik (seed).</p>`,
+          slug,
+          title: meta.title,
+          content: meta.content,
           version: '1.0',
           isPublished: true,
           publishedAt: new Date(),
           locale: 'tr',
         }),
       );
-      console.log('Legal:', doc.slug);
+      console.log('Legal:', slug);
+    } else if (
+      !exists.content ||
+      exists.content.includes('örnek içerik')
+    ) {
+      exists.title = meta.title;
+      exists.content = meta.content;
+      exists.isPublished = true;
+      exists.publishedAt = exists.publishedAt || new Date();
+      await em.save(exists);
+      console.log('Legal updated:', slug);
     }
   }
 
@@ -330,6 +331,38 @@ async function seed() {
         for (const link of list) {
           if (link.href === '/takip/ornek') {
             link.href = '/takip';
+            changed = true;
+          }
+        }
+      }
+      if (nav.footerLegal) {
+        const extras = [
+          {
+            href: '/musteri-memnuniyeti',
+            label: 'Müşteri Memnuniyeti',
+          },
+          { href: '/guvenli-alisveris', label: 'Güvenli Alışveriş' },
+        ];
+        for (const extra of extras) {
+          if (!nav.footerLegal.some((l) => l.href === extra.href)) {
+            const idx = nav.footerLegal.findIndex(
+              (l) => l.href === '/iptal-iade',
+            );
+            nav.footerLegal.splice(
+              idx >= 0 ? idx + 1 : nav.footerLegal.length,
+              0,
+              extra,
+            );
+            changed = true;
+          }
+        }
+        for (const link of nav.footerLegal) {
+          if (link.href === '/cerez-politikasi' && link.label === 'Çerez Politikası') {
+            link.label = 'Çerez Kullanımı';
+            changed = true;
+          }
+          if (link.href === '/iptal-iade' && link.label.includes('İptal')) {
+            link.label = 'İade Politikası';
             changed = true;
           }
         }

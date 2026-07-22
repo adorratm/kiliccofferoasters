@@ -65,6 +65,25 @@ button {
   font: inherit;
 }
 
+a,
+button,
+[role="button"],
+summary,
+label[for],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+select {
+  cursor: pointer;
+}
+
+button:disabled,
+a[aria-disabled="true"],
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -227,10 +246,14 @@ a {
 .row-motion {
   transition:
     background-color var(--motion-fast) ease,
-    transform var(--motion-fast) ease;
+    transform var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
 }
 .row-motion:hover {
   transform: translate3d(2px, 0, 0);
+}
+.row-motion[aria-selected="true"] {
+  transform: none;
 }
 
 .nav-item-motion {

@@ -344,7 +344,10 @@ export type GuestOrderLookupResult = {
 export type PaymentInitResponse = {
   orderId: string;
   orderNumber: string;
+  provider?: string;
   paymentPageUrl?: string;
+  iframeUrl?: string | null;
   token?: string;
   checkoutFormContent?: string;
+  mock?: boolean;
 };

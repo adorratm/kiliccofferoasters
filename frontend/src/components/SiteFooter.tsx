@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Reveal } from "@/components/Reveal";
+import { PaymentCardLogos } from "@/components/PaymentCardLogos";
 import type { SiteSettings } from "@/lib/cms";
 import { DEFAULT_SETTINGS } from "@/lib/cms";
 
@@ -70,6 +71,7 @@ export function SiteFooter({ settings = DEFAULT_SETTINGS }: Props) {
           ))}
         </Reveal>
       </div>
+      <PaymentCardLogos />
     </footer>
   );
 }

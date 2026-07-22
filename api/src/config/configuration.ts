@@ -45,6 +45,22 @@ export default () => ({
       process.env.APPLE_CALLBACK_URL ||
       'http://localhost:4000/auth/apple/callback',
   },
+  payment: {
+    /** paytr | iyzico — boşsa PayTR bilgileri varsa paytr, değilse iyzico */
+    provider: process.env.PAYMENT_PROVIDER || '',
+  },
+  paytr: {
+    merchantId: process.env.PAYTR_MERCHANT_ID || '',
+    merchantKey: process.env.PAYTR_MERCHANT_KEY || '',
+    merchantSalt: process.env.PAYTR_MERCHANT_SALT || '',
+    /** 1 = test modu */
+    testMode: process.env.PAYTR_TEST_MODE || '1',
+    debugOn: process.env.PAYTR_DEBUG_ON || '1',
+    noInstallment: process.env.PAYTR_NO_INSTALLMENT || '0',
+    maxInstallment: process.env.PAYTR_MAX_INSTALLMENT || '0',
+    /** Yerel geliştirmede dış IP yoksa kullanılır */
+    fallbackIp: process.env.PAYTR_FALLBACK_IP || '85.34.78.112',
+  },
   iyzico: {
     apiKey: process.env.IYZICO_API_KEY || '',
     secretKey: process.env.IYZICO_SECRET_KEY || '',

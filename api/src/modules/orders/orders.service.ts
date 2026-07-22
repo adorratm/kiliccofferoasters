@@ -159,7 +159,7 @@ export class OrdersService {
 
       const payment = tx.create(Payment, {
         orderId: order.id,
-        provider: 'iyzico',
+        provider: 'paytr',
         status: PaymentStatus.PENDING,
         amount: total.toFixed(2),
         currency: 'TRY',

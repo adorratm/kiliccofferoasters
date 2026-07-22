@@ -227,6 +227,18 @@ function CategoriesPageInner() {
         rows={visible}
         rowKey={(r) => r.id}
         emptyMessage="Kategori yok"
+        selectedRowKey={editing ? form.id || null : null}
+        onRowClick={(r) => {
+          setForm({
+            id: r.id,
+            slug: r.slug,
+            name: r.name,
+            description: r.description || '',
+            sortOrder: String(r.sortOrder),
+            isActive: r.isActive,
+          });
+          setEditing(true);
+        }}
         columns={[
           { key: 'name', header: 'Kategori', render: (r) => r.name },
           { key: 'slug', header: 'Slug', render: (r) => r.slug },

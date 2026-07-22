@@ -16,11 +16,7 @@ import {
   PaymentCallbackDto,
   RetryPaymentDto,
 } from '@modules/payments/dto/payments.dto';
-import { NotificationsService } from '@modules/notifications/notifications.service';
-import { statusLabel } from '@modules/notifications/notification.templates';
-import { InventoryService } from '@modules/catalog/inventory.service';
-import { CartService } from '@modules/cart/cart.service';
-import { CouponsService } from '@modules/coupons/coupons.service';
+import { PaymentFulfillmentService } from '@modules/payments/payment-fulfillment.service';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Iyzipay = require('iyzipay');
@@ -32,10 +28,7 @@ export class IyzicoService {
   constructor(
     @InjectEntityManager() private readonly em: EntityManager,
     private readonly config: ConfigService,
-    private readonly notifications: NotificationsService,
-    private readonly inventory: InventoryService,
-    private readonly carts: CartService,
-    private readonly coupons: CouponsService,
+    private readonly fulfillment: PaymentFulfillmentService,
   ) {
     const apiKey = this.config.get<string>('iyzico.apiKey') || '';
     const secretKey = this.config.get<string>('iyzico.secretKey') || '';
@@ -107,6 +100,7 @@ export class IyzicoService {
 
     if (!this.iyzipay) {
       const mockToken = `mock-token-${randomUUID()}`;
+      order.payment.provider = 'iyzico';
       order.payment.status = PaymentStatus.PENDING;
       order.payment.conversationId = conversationId;
       order.payment.token = mockToken;
@@ -119,6 +113,7 @@ export class IyzicoService {
       return {
         status: 'success',
         mock: true,
+        provider: 'iyzico',
         token: mockToken,
         conversationId,
         checkoutFormContent: `<div>Mock iyzico checkout — token: ${mockToken}</div>`,
@@ -194,12 +189,13 @@ export class IyzicoService {
       },
     );
 
+    order.payment.provider = 'iyzico';
     order.payment.conversationId = conversationId;
     order.payment.token = (result.token as string) || null;
     order.payment.rawResponse = result;
     await this.em.save(order.payment);
 
-    return result;
+    return { ...result, provider: 'iyzico' };
   }
 
   async handleCallback(dto: PaymentCallbackDto) {
@@ -224,6 +220,7 @@ export class IyzicoService {
     const isMock = !this.iyzipay || dto.token?.startsWith('mock-token-');
     let success = false;
     let raw: Record<string, unknown> = { ...dto };
+    let paymentId: string | null = null;
 
     if (isMock) {
       success =
@@ -251,45 +248,13 @@ export class IyzicoService {
       success =
         result.paymentStatus === 'SUCCESS' || result.status === 'success';
       if (result.paymentId) {
-        payment.paymentId = String(result.paymentId);
+        paymentId = String(result.paymentId);
       }
     }
 
-    payment.status = success ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
-    payment.rawResponse = raw;
-    if (dto.paymentId) payment.paymentId = dto.paymentId;
-    await this.em.save(payment);
+    if (dto.paymentId) paymentId = dto.paymentId;
 
-    if (payment.order) {
-      const previous = payment.order.status;
-      payment.order.status = success
-        ? OrderStatus.PAID
-        : OrderStatus.PENDING_PAYMENT;
-      await this.em.save(payment.order);
-
-      if (success && previous !== OrderStatus.PAID) {
-        await this.inventory.decrementForPaidOrder(payment.order.id);
-        await this.coupons.confirmRedemptionForPaidOrder(payment.order.id);
-        await this.carts.clearCartById(payment.order.sourceCartId);
-        await this.notifications.enqueueOrderStatus(
-          payment.order.id,
-          'order_paid',
-          ['email', 'sms'],
-          {
-            status: OrderStatus.PAID,
-            statusLabel: statusLabel(OrderStatus.PAID),
-          },
-        );
-      }
-    }
-
-    return {
-      success,
-      paymentStatus: payment.status,
-      orderId: payment.orderId,
-      orderNumber: payment.order?.orderNumber ?? null,
-      orderStatus: payment.order?.status,
-    };
+    return this.fulfillment.applyResult(payment, success, raw, { paymentId });
   }
 
   /**

@@ -915,10 +915,25 @@ export default function ContentPage() {
             Bu sayfa için içerik yok. Seed çalıştırın: yarn seed
           </p>
         ) : (
-          sections.map((section) => (
+          sections.map((section) => {
+            const selected = editing?.id === section.id;
+            return (
             <div
               key={section.id}
-              className="flex items-center justify-between border border-border-muted bg-surface px-4 py-3"
+              role="button"
+              tabIndex={0}
+              onClick={() => startEdit(section)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  startEdit(section);
+                }
+              }}
+              className={`row-motion flex cursor-pointer items-center justify-between border px-4 py-3 ${
+                selected
+                  ? 'border-accent bg-accent/15 ring-1 ring-inset ring-accent/40'
+                  : 'border-border-muted bg-surface hover:bg-surface-high'
+              }`}
             >
               <div>
                 <p className="font-medium">
@@ -926,17 +941,22 @@ export default function ContentPage() {
                 </p>
                 <p className="mono text-[10px] text-muted">
                   {section.sectionKey} · sıra {section.sortOrder}
+                  {selected ? ' · düzenleniyor' : ''}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => startEdit(section)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startEdit(section);
+                }}
                 className="text-sm text-accent hover:underline"
               >
                 Düzenle
               </button>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

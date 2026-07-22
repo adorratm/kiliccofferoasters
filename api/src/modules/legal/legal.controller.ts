@@ -47,6 +47,26 @@ export class LegalController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Post('documents/sync-defaults')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Admin: varsayılan yasal metinleri DB’ye senkronize et',
+  })
+  syncDefaults(@Body() body?: { force?: boolean }) {
+    return this.legalService.syncDefaults(Boolean(body?.force));
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Post('admin/documents/sync-defaults')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Admin: varsayılan yasal metinleri senkronize et (alias)',
+  })
+  syncDefaultsAlias(@Body() body?: { force?: boolean }) {
+    return this.legalService.syncDefaults(Boolean(body?.force));
+  }
+
+  @Roles(UserRole.ADMIN)
   @Post('admin/documents')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin: yasal belge oluştur' })

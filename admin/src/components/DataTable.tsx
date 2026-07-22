@@ -11,6 +11,8 @@ type DataTableProps<T> = {
   rowKey: (row: T) => string;
   emptyMessage?: string;
   onRowClick?: (row: T) => void;
+  /** Düzenlenen / seçili satır — tabloda vurgulanır */
+  selectedRowKey?: string | null;
 };
 
 export function DataTable<T>({
@@ -19,6 +21,7 @@ export function DataTable<T>({
   rowKey,
   emptyMessage = 'Kayıt yok',
   onRowClick,
+  selectedRowKey = null,
 }: DataTableProps<T>) {
   if (!rows.length) {
     return (
@@ -44,21 +47,50 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr
-              key={rowKey(row)}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={`row-motion border-t border-border-muted bg-surface hover:bg-surface-high ${
-                onRowClick ? 'cursor-pointer' : ''
-              }`}
-            >
-              {columns.map((col) => (
-                <td key={col.key} className={`px-3 py-2.5 ${col.className || ''}`}>
-                  {col.render(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const key = rowKey(row);
+            const selected = Boolean(selectedRowKey && selectedRowKey === key);
+            const clickable = Boolean(onRowClick);
+            return (
+              <tr
+                key={key}
+                onClick={
+                  onRowClick
+                    ? (e) => {
+                        const target = e.target as HTMLElement | null;
+                        if (
+                          target?.closest(
+                            'button, a, input, select, textarea, label',
+                          )
+                        ) {
+                          return;
+                        }
+                        onRowClick(row);
+                      }
+                    : undefined
+                }
+                aria-selected={selected || undefined}
+                className={[
+                  'row-motion border-t border-border-muted',
+                  selected
+                    ? 'bg-accent/15 ring-1 ring-inset ring-accent/50'
+                    : 'bg-surface hover:bg-surface-high',
+                  clickable ? 'cursor-pointer' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {columns.map((col) => (
+                  <td
+                    key={col.key}
+                    className={`px-3 py-2.5 ${col.className || ''}`}
+                  >
+                    {col.render(row)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

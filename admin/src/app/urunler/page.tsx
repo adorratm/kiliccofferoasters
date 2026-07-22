@@ -652,6 +652,8 @@ function ProductsPageInner() {
         rows={rows}
         rowKey={(r) => r.id}
         emptyMessage={loading ? 'Yükleniyor…' : 'Henüz ürün yok'}
+        selectedRowKey={editing ? form.id || null : null}
+        onRowClick={(r) => startEdit(r)}
         columns={[
           {
             key: 'name',
