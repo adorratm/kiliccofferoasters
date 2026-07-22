@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 76" fill="none">
+  <rect width="120" height="76" rx="4" fill="#FFFFFF"/>
+  <rect x="0.75" y="0.75" width="118.5" height="74.5" rx="3.25" stroke="#D0D0D0"/>
+  <text x="60" y="40" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="800" fill="#009639">Bankkart</text>
+  <rect x="38" y="48" width="44" height="10" rx="5" fill="#009639"/>
+  <text x="60" y="56" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="700" fill="#FFFFFF" letter-spacing="1">COMBO</text>
+</svg>

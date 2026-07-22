@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 76" fill="none">
+  <rect width="120" height="76" rx="4" fill="#FFFFFF"/>
+  <rect x="0.75" y="0.75" width="118.5" height="74.5" rx="3.25" stroke="#D0D0D0"/>
+  <circle cx="42" cy="38" r="20" fill="#00A651"/>
+  <text x="42" y="43" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="800" fill="#FFFFFF">bonus</text>
+  <text x="84" y="43" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="800" fill="#F58220">Card</text>
+</svg>

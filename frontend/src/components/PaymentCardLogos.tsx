@@ -1,15 +1,15 @@
 const CARDS = [
-  { id: "advantage", label: "Advantage", tone: "#1a3a5c" },
-  { id: "axess", label: "Axess", tone: "#7a1f2b" },
-  { id: "bankkart", label: "Bankkart", tone: "#0d5c4d" },
-  { id: "bonus", label: "Bonus", tone: "#c45c26" },
-  { id: "cardfinans", label: "CardFinans", tone: "#1e4d8c" },
-  { id: "maximum", label: "Maximum", tone: "#5c2d91" },
-  { id: "paraf", label: "Paraf", tone: "#b8860b" },
-  { id: "world", label: "World", tone: "#2f5d3a" },
-  { id: "visa", label: "Visa", tone: "#1a1f71" },
-  { id: "mastercard", label: "Mastercard", tone: "#eb001b" },
-  { id: "troy", label: "TROY", tone: "#00a3e0" },
+  { id: "advantage", label: "Advantage", src: "/images/payment-cards/advantage.svg" },
+  { id: "axess", label: "Axess", src: "/images/payment-cards/axess.svg" },
+  { id: "bankkart", label: "Bankkart", src: "/images/payment-cards/bankkart.svg" },
+  { id: "bonus", label: "Bonus", src: "/images/payment-cards/bonus.svg" },
+  { id: "cardfinans", label: "CardFinans", src: "/images/payment-cards/cardfinans.svg" },
+  { id: "maximum", label: "Maximum", src: "/images/payment-cards/maximum.svg" },
+  { id: "paraf", label: "Paraf", src: "/images/payment-cards/paraf.svg" },
+  { id: "world", label: "World", src: "/images/payment-cards/world.svg" },
+  { id: "visa", label: "Visa", src: "/images/payment-cards/visa.svg" },
+  { id: "mastercard", label: "Mastercard", src: "/images/payment-cards/mastercard.svg" },
+  { id: "troy", label: "TROY", src: "/images/payment-cards/troy.svg" },
 ] as const;
 
 export function PaymentCardLogos() {
@@ -19,18 +19,24 @@ export function PaymentCardLogos() {
         <p className="mb-5 font-meta text-[10px] uppercase tracking-[0.2em] text-primary/60">
           Güvenli ödeme · Desteklenen kartlar
         </p>
-        <ul className="flex flex-wrap items-center gap-2.5 md:gap-3" aria-label="Kabul edilen kartlar">
+        <ul
+          className="flex flex-wrap items-center gap-3 md:gap-4"
+          aria-label="Kabul edilen kartlar"
+        >
           {CARDS.map((card) => (
             <li key={card.id}>
               <span
-                className="inline-flex h-10 min-w-21 items-center justify-center gap-2 border border-outline-variant/30 bg-surface-container-low px-3"
+                className="inline-flex items-center gap-2.5 border border-outline-variant/25 bg-surface-container-low py-1.5 pl-1.5 pr-3"
                 title={card.label}
-                aria-label={card.label}
               >
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: card.tone }}
-                  aria-hidden
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={card.src}
+                  alt={`${card.label} logosu`}
+                  width={56}
+                  height={36}
+                  className="h-8 w-12.5 shrink-0 object-contain bg-white sm:h-9 sm:w-14"
+                  loading="lazy"
                 />
                 <span className="font-meta text-[9px] uppercase tracking-widest text-secondary">
                   {card.label}

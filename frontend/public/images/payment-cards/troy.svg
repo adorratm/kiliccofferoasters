@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 76" fill="none">
+  <defs>
+    <linearGradient id="tg" x1="0" y1="0" x2="120" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00AEEF"/>
+      <stop offset="1" stop-color="#0057B8"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="76" rx="4" fill="url(#tg)"/>
+  <text x="60" y="48" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="900" fill="#FFFFFF" letter-spacing="4">TROY</text>
+</svg>
