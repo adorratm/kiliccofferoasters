@@ -7,8 +7,6 @@ import { AuthController } from '@modules/auth/auth.controller';
 import { JwtStrategy } from '@modules/auth/strategies/jwt.strategy';
 import { GoogleStrategy } from '@modules/auth/strategies/google.strategy';
 import { GoogleAdminStrategy } from '@modules/auth/strategies/google-admin.strategy';
-import { FacebookStrategy } from '@modules/auth/strategies/facebook.strategy';
-import { AppleStrategy } from '@modules/auth/strategies/apple.strategy';
 import { GoogleAdminOauthFilter } from '@modules/auth/filters/google-admin-oauth.filter';
 
 @Module({
@@ -31,8 +29,6 @@ import { GoogleAdminOauthFilter } from '@modules/auth/filters/google-admin-oauth
     JwtStrategy,
     GoogleStrategy,
     GoogleAdminStrategy,
-    FacebookStrategy,
-    AppleStrategy,
     GoogleAdminOauthFilter,
   ],
   exports: [AuthService, JwtModule],

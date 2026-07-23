@@ -88,6 +88,13 @@ export class AuthService {
     return this.sanitize(user);
   }
 
+  /**
+   * Google (OAuth) girişi:
+   * - Aynı Google kimliği varsa o kullanıcı
+   * - Yoksa aynı e-posta ile kayıtlı hesap varsa ona bağlanır (ayrı kullanıcı açılmaz)
+   * - Hiçbiri yoksa yeni kullanıcı oluşturulur
+   * Yerel şifre varsa korunur; hem e-posta/şifre hem Google ile giriş mümkün kalır
+   */
   async findOrCreateOAuthUser(input: OAuthProfileInput): Promise<User> {
     const email = input.email.toLowerCase().trim();
     if (input.asAdmin) {
@@ -99,12 +106,23 @@ export class AuthService {
       }
     }
 
-    let user = await this.em.findOne(User, {
-      where: [
-        { provider: input.provider, providerId: input.providerId },
-        { email },
-      ],
-    });
+    let user =
+      (await this.em.findOne(User, {
+        where: {
+          provider: input.provider,
+          providerId: input.providerId,
+        },
+      })) || null;
+
+    if (!user && input.providerId) {
+      user = await this.em.findOne(User, {
+        where: { providerId: input.providerId },
+      });
+    }
+
+    if (!user) {
+      user = await this.em.findOne(User, { where: { email } });
+    }
 
     if (!user) {
       const role = await this.resolveRole(email, !!input.asAdmin);
@@ -124,12 +142,22 @@ export class AuthService {
       return user;
     }
 
-    user.provider = input.provider;
+    if (!user.isActive) {
+      throw new UnauthorizedException('Hesap pasif');
+    }
+
+    // Mevcut hesaba Google’ı bağla — şifreyi silme
     user.providerId = input.providerId;
     user.emailVerified = true;
-    if (input.firstName) user.firstName = input.firstName;
-    if (input.lastName) user.lastName = input.lastName;
-    if (input.avatarUrl) user.avatarUrl = input.avatarUrl;
+    if (user.passwordHash) {
+      // Yerel kayıt kalır; şifre + Google birlikte kullanılabilir
+      user.provider = AuthProvider.LOCAL;
+    } else {
+      user.provider = input.provider;
+    }
+    if (input.firstName && !user.firstName) user.firstName = input.firstName;
+    if (input.lastName && !user.lastName) user.lastName = input.lastName;
+    if (input.avatarUrl && !user.avatarUrl) user.avatarUrl = input.avatarUrl;
 
     if (input.asAdmin || (await this.isAdminEmail(email))) {
       user.role = UserRole.ADMIN;

@@ -329,7 +329,7 @@ export async function deleteAddress(token: string, id: string) {
   });
 }
 
-export function oauthUrl(provider: "google" | "facebook" | "apple") {
+export function oauthUrl(provider: "google") {
   return `${API_BASE}/auth/${provider}`;
 }
 

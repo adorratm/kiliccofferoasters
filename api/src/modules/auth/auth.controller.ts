@@ -84,38 +84,6 @@ export class AuthController {
     this.redirectWithToken(req.user as User, res, 'admin');
   }
 
-  @Public()
-  @Get('facebook')
-  @UseGuards(AuthGuard('facebook'))
-  @ApiOperation({ summary: 'Facebook OAuth başlat' })
-  facebookAuth() {
-    return;
-  }
-
-  @Public()
-  @Get('facebook/callback')
-  @UseGuards(AuthGuard('facebook'))
-  @ApiOperation({ summary: 'Facebook OAuth callback' })
-  facebookCallback(@Req() req: Request, @Res() res: Response) {
-    this.redirectWithToken(req.user as User, res, 'frontend');
-  }
-
-  @Public()
-  @Get('apple')
-  @UseGuards(AuthGuard('apple'))
-  @ApiOperation({ summary: 'Apple OAuth başlat' })
-  appleAuth() {
-    return;
-  }
-
-  @Public()
-  @Get('apple/callback')
-  @UseGuards(AuthGuard('apple'))
-  @ApiOperation({ summary: 'Apple OAuth callback' })
-  appleCallback(@Req() req: Request, @Res() res: Response) {
-    this.redirectWithToken(req.user as User, res, 'frontend');
-  }
-
   private redirectWithToken(
     user: User,
     res: Response,

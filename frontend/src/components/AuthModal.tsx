@@ -40,7 +40,7 @@ export function AuthShell({
           {title || (isLogin ? "Giriş" : "Kayıt")}
         </h1>
         <p className="mt-4 font-meta text-xs uppercase tracking-widest text-secondary">
-          E-posta ile devam edin veya sosyal sağlayıcıya bağlanın.
+          E-posta ile devam edin veya Google ile bağlanın.
         </p>
       </div>
 
@@ -79,29 +79,19 @@ export function AuthShell({
 
 export function OAuthLinks({ nextPath }: { nextPath?: string }) {
   const next = safeNextPath(nextPath, "/hesabim");
-  const providers = [
-    { id: "google" as const, label: "Google" },
-    { id: "facebook" as const, label: "Facebook" },
-    { id: "apple" as const, label: "Apple" },
-  ];
 
   return (
     <div className="mt-8 border-t border-outline-variant/20 pt-8">
       <p className="mb-4 font-meta text-[10px] uppercase tracking-widest text-on-surface-variant">
         Sosyal giriş
       </p>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {providers.map((p) => (
-          <a
-            key={p.id}
-            href={oauthUrl(p.id)}
-            onClick={() => rememberAuthNext(next)}
-            className="oauth-chip border border-outline-variant/40 px-4 py-3 text-center font-meta text-[11px] uppercase tracking-widest text-secondary hover:border-primary hover:text-primary"
-          >
-            {p.label}
-          </a>
-        ))}
-      </div>
+      <a
+        href={oauthUrl("google")}
+        onClick={() => rememberAuthNext(next)}
+        className="oauth-chip block border border-outline-variant/40 px-4 py-3 text-center font-meta text-[11px] uppercase tracking-widest text-secondary hover:border-primary hover:text-primary"
+      >
+        Google ile devam et
+      </a>
     </div>
   );
 }

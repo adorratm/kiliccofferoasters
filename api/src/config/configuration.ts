@@ -29,22 +29,6 @@ export default () => ({
       process.env.GOOGLE_ADMIN_CALLBACK_URL ||
       'http://localhost:4000/auth/google/admin/callback',
   },
-  facebook: {
-    appId: process.env.FACEBOOK_APP_ID || '',
-    appSecret: process.env.FACEBOOK_APP_SECRET || '',
-    callbackUrl:
-      process.env.FACEBOOK_CALLBACK_URL ||
-      'http://localhost:4000/auth/facebook/callback',
-  },
-  apple: {
-    clientId: process.env.APPLE_CLIENT_ID || '',
-    teamId: process.env.APPLE_TEAM_ID || '',
-    keyId: process.env.APPLE_KEY_ID || '',
-    privateKey: process.env.APPLE_PRIVATE_KEY || '',
-    callbackUrl:
-      process.env.APPLE_CALLBACK_URL ||
-      'http://localhost:4000/auth/apple/callback',
-  },
   payment: {
     /** paytr | iyzico — boşsa PayTR bilgileri varsa paytr, değilse iyzico */
     provider: process.env.PAYMENT_PROVIDER || '',
