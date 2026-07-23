@@ -4,7 +4,6 @@ RUN corepack enable
 
 FROM base AS build
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
 COPY api ./api
 COPY frontend/package.json ./frontend/
 COPY admin/package.json ./admin/
@@ -17,7 +16,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN corepack enable
 COPY --from=build /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
-COPY --from=build /app/.yarn ./.yarn
 COPY --from=build /app/api/package.json ./api/package.json
 COPY --from=build /app/api/dist ./api/dist
 COPY --from=build /app/node_modules ./node_modules

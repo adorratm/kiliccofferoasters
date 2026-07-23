@@ -81,7 +81,7 @@ jobs:
             --exclude='deploy/.env' \
             --exclude='deploy/artifacts/*.sql' \
             api frontend admin docker deploy \
-            docker-compose.prod.yml package.json yarn.lock .yarnrc.yml .yarn .dockerignore
+            docker-compose.prod.yml package.json yarn.lock .yarnrc.yml .dockerignore
 
           ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" \
             -o StrictHostKeyChecking=accept-new \

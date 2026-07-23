@@ -4,7 +4,6 @@ RUN corepack enable
 
 FROM base AS build
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
 COPY frontend ./frontend
 COPY api/package.json ./api/
 COPY admin/package.json ./admin/
