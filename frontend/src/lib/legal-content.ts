@@ -10,8 +10,8 @@ const SELLER = {
   email: "info@kiliccoffeeroaster.com.tr",
   phone: "+90 541 214 79 63",
   website: "https://kiliccoffeeroaster.com.tr",
-  taxOffice: "[Vergi Dairesi — güncellenecek]",
-  taxNumber: "[Vergi No / TCKN — güncellenecek]",
+  taxOffice: "Torbalı Vergi Dairesi",
+  taxNumber: "",
   mersis: "[MERSİS No — güncellenecek]",
 };
 
