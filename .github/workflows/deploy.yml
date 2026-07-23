@@ -20,36 +20,31 @@ jobs:
         with:
           node-version: 22
 
-      - name: Enable Yarn 4 (Corepack)
+      - name: Enable Corepack (Yarn 4)
         run: |
-          # ubuntu-latest'te global Yarn 1.22 PATH'te olabilir; Corepack ile çakışır
-          sudo npm uninstall -g yarn 2>/dev/null || true
-          sudo rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg 2>/dev/null || true
           corepack enable
           corepack prepare yarn@4.17.1 --activate
-          hash -r
-          yarn --version
-          test "$(yarn --version)" = "4.17.1"
+          corepack yarn --version
 
       - name: Install
-        run: yarn install --immutable
+        run: corepack yarn install --immutable
 
       - name: Build API
-        run: yarn build:api
+        run: corepack yarn build:api
 
       - name: Build frontend
         env:
           NEXT_PUBLIC_API_URL: https://api.kiliccoffeeroaster.com.tr
           NEXT_PUBLIC_SITE_URL: https://kiliccoffeeroaster.com.tr
           NEXT_PUBLIC_ADMIN_URL: https://admin.kiliccoffeeroaster.com.tr
-        run: yarn build:frontend
+        run: corepack yarn build:frontend
 
       - name: Build admin
         env:
           NEXT_PUBLIC_API_URL: https://api.kiliccoffeeroaster.com.tr
           NEXT_PUBLIC_ADMIN_URL: https://admin.kiliccoffeeroaster.com.tr
           NEXT_PUBLIC_SITE_URL: https://kiliccoffeeroaster.com.tr
-        run: yarn build:admin
+        run: corepack yarn build:admin
 
   deploy:
     name: Deploy to Hetzner
