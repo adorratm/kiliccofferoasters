@@ -14,25 +14,35 @@ const LABELS: Record<(typeof AXES)[number], string> = {
 };
 
 function point(cx: number, cy: number, r: number, index: number, total: number) {
-  const angle = (-Math.PI / 2) + (index * 2 * Math.PI) / total;
+  const angle = -Math.PI / 2 + (index * 2 * Math.PI) / total;
   return {
     x: cx + r * Math.cos(angle),
     y: cy + r * Math.sin(angle),
   };
 }
 
+function hasGeometryValues(values?: Record<string, number> | null) {
+  if (!values) return false;
+  return AXES.some((key) => {
+    const raw = values[key] ?? values[LABELS[key].toLowerCase()];
+    return raw != null && !Number.isNaN(Number(raw));
+  });
+}
+
 export function FlavorGeometry({ values }: Props) {
+  if (!hasGeometryValues(values)) return null;
+
   const cx = 100;
   const cy = 100;
   const maxR = 70;
   const normalized = AXES.map((key) => {
-    const raw = values?.[key] ?? values?.[LABELS[key].toLowerCase()] ?? 0.65;
-    return Math.min(1, Math.max(0.15, Number(raw) > 1 ? Number(raw) / 10 : Number(raw)));
+    const raw = values?.[key] ?? values?.[LABELS[key].toLowerCase()] ?? 0;
+    return Math.min(1, Math.max(0, Number(raw) > 1 ? Number(raw) / 10 : Number(raw)));
   });
 
   const poly = normalized
     .map((v, i) => {
-      const p = point(cx, cy, maxR * v, i, AXES.length);
+      const p = point(cx, cy, maxR * Math.max(v, 0.05), i, AXES.length);
       return `${p.x},${p.y}`;
     })
     .join(" ");

@@ -23,11 +23,23 @@ export type Product = {
   shortDescription?: string | null;
   originCountry?: string | null;
   originRegion?: string | null;
+  altitude?: string | null;
   process?: string | null;
   varietal?: string | null;
   batchId?: string | null;
   roastLevel?: string | null;
   flavorNotes?: string[];
+  flavorGeometry?: Record<string, number> | null;
+  roastLog?: {
+    roastTime?: string;
+    dropTemp?: string;
+    phases?: {
+      phase: string;
+      duration: string;
+      target: string;
+      airflow: string;
+    }[];
+  } | null;
   imageUrl?: string | null;
   gallery?: string[];
   badge?: string | null;

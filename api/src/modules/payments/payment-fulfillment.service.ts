@@ -56,7 +56,7 @@ export class PaymentFulfillmentService {
       await this.notifications.enqueueOrderStatus(
         order.id,
         'order_paid',
-        ['email', 'sms'],
+        ['email', 'whatsapp'],
         {
           status: OrderStatus.PAID,
           statusLabel: statusLabel(OrderStatus.PAID),

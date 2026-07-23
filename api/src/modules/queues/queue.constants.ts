@@ -4,11 +4,13 @@ export const QUEUE_ABANDONED_CART = 'abandoned-cart';
 export const QUEUE_MARKETPLACE_SYNC = 'marketplace-sync';
 export const QUEUE_LOW_STOCK = 'low-stock';
 
+export type NotificationChannelName = 'email' | 'whatsapp' | 'sms';
+
 export type NotificationJobPayload = {
   orderId?: string;
   shipmentId?: string | null;
   template: string;
-  channels: Array<'email' | 'sms'>;
+  channels: NotificationChannelName[];
   context?: Record<string, unknown>;
   recipientEmail?: string;
   recipientName?: string;

@@ -20,6 +20,22 @@ type VariantForm = {
   isActive: boolean;
 };
 
+type RoastPhaseForm = {
+  phase: string;
+  duration: string;
+  target: string;
+  airflow: string;
+};
+
+type FlavorGeometryForm = {
+  acidity: string;
+  sweetness: string;
+  body: string;
+  floral: string;
+  fruit: string;
+  clarity: string;
+};
+
 type FormState = {
   id?: string;
   name: string;
@@ -31,11 +47,16 @@ type FormState = {
   roastLevel: string;
   originCountry: string;
   originRegion: string;
+  altitude: string;
   process: string;
   varietal: string;
   batchId: string;
   badge: string;
   flavorNotes: string;
+  roastTime: string;
+  dropTemp: string;
+  roastPhases: RoastPhaseForm[];
+  flavorGeometry: FlavorGeometryForm;
   imageUrl: string;
   gallery: string;
   categoryId: string;
@@ -52,6 +73,31 @@ const emptyVariant = (): VariantForm => ({
   isActive: true,
 });
 
+const emptyPhase = (): RoastPhaseForm => ({
+  phase: '',
+  duration: '',
+  target: '',
+  airflow: '',
+});
+
+const emptyFlavorGeometry = (): FlavorGeometryForm => ({
+  acidity: '',
+  sweetness: '',
+  body: '',
+  floral: '',
+  fruit: '',
+  clarity: '',
+});
+
+const FLAVOR_AXES: { key: keyof FlavorGeometryForm; label: string }[] = [
+  { key: 'acidity', label: 'Acidity' },
+  { key: 'sweetness', label: 'Sweetness' },
+  { key: 'body', label: 'Body' },
+  { key: 'floral', label: 'Floral' },
+  { key: 'fruit', label: 'Fruit' },
+  { key: 'clarity', label: 'Clarity' },
+];
+
 const emptyForm = (): FormState => ({
   name: '',
   slug: '',
@@ -62,11 +108,16 @@ const emptyForm = (): FormState => ({
   roastLevel: '',
   originCountry: '',
   originRegion: '',
+  altitude: '',
   process: '',
   varietal: '',
   batchId: '',
   badge: '',
   flavorNotes: '',
+  roastTime: '',
+  dropTemp: '',
+  roastPhases: [emptyPhase()],
+  flavorGeometry: emptyFlavorGeometry(),
   imageUrl: '',
   gallery: '',
   categoryId: '',
@@ -74,6 +125,53 @@ const emptyForm = (): FormState => ({
   isFeatured: false,
   variants: [emptyVariant()],
 });
+
+function parseFlavorGeometry(
+  raw?: Record<string, number> | null,
+): FlavorGeometryForm {
+  const base = emptyFlavorGeometry();
+  if (!raw) return base;
+  for (const { key } of FLAVOR_AXES) {
+    const v = raw[key];
+    if (v != null && !Number.isNaN(Number(v))) {
+      base[key] = String(v);
+    }
+  }
+  return base;
+}
+
+function buildFlavorGeometryPayload(
+  form: FlavorGeometryForm,
+): Record<string, number> | null {
+  const out: Record<string, number> = {};
+  for (const { key } of FLAVOR_AXES) {
+    const raw = form[key].trim();
+    if (!raw) continue;
+    const n = Number(raw);
+    if (Number.isNaN(n)) continue;
+    out[key] = Math.min(1, Math.max(0, n > 1 ? n / 10 : n));
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function buildRoastLogPayload(form: FormState): Record<string, unknown> | null {
+  const roastTime = form.roastTime.trim();
+  const dropTemp = form.dropTemp.trim();
+  const phases = form.roastPhases
+    .map((p) => ({
+      phase: p.phase.trim(),
+      duration: p.duration.trim(),
+      target: p.target.trim(),
+      airflow: p.airflow.trim(),
+    }))
+    .filter((p) => p.phase || p.duration || p.target || p.airflow);
+  if (!roastTime && !dropTemp && phases.length === 0) return null;
+  return {
+    ...(roastTime ? { roastTime } : {}),
+    ...(dropTemp ? { dropTemp } : {}),
+    ...(phases.length ? { phases } : {}),
+  };
+}
 
 function ProductsPageInner() {
   const searchParams = useSearchParams();
@@ -175,11 +273,24 @@ function ProductsPageInner() {
       roastLevel: p.roastLevel || '',
       originCountry: p.originCountry || '',
       originRegion: p.originRegion || '',
+      altitude: p.altitude || '',
       process: p.process || '',
       varietal: p.varietal || '',
       batchId: p.batchId || '',
       badge: p.badge || '',
       flavorNotes: (p.flavorNotes || []).join(', '),
+      roastTime: p.roastLog?.roastTime || '',
+      dropTemp: p.roastLog?.dropTemp || '',
+      roastPhases:
+        p.roastLog?.phases?.length
+          ? p.roastLog.phases.map((row) => ({
+              phase: row.phase || '',
+              duration: row.duration || '',
+              target: row.target || '',
+              airflow: row.airflow || '',
+            }))
+          : [emptyPhase()],
+      flavorGeometry: parseFlavorGeometry(p.flavorGeometry),
       imageUrl: p.imageUrl || '',
       gallery: (p.gallery || []).join('\n'),
       categoryId: p.categoryId || '',
@@ -214,6 +325,7 @@ function ProductsPageInner() {
       roastLevel: form.roastLevel || null,
       originCountry: form.originCountry || null,
       originRegion: form.originRegion || null,
+      altitude: form.altitude || null,
       process: form.process || null,
       varietal: form.varietal || null,
       batchId: form.batchId || null,
@@ -222,6 +334,8 @@ function ProductsPageInner() {
         .split(',')
         .map((n) => n.trim())
         .filter(Boolean),
+      flavorGeometry: buildFlavorGeometryPayload(form.flavorGeometry),
+      roastLog: buildRoastLogPayload(form),
       imageUrl: form.imageUrl || null,
       gallery: form.gallery
         .split('\n')
@@ -451,6 +565,17 @@ function ProductsPageInner() {
             />
           </label>
           <label className="block text-sm">
+            <span className="mono text-[10px] uppercase text-muted">Rakım</span>
+            <input
+              value={form.altitude}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, altitude: e.target.value }))
+              }
+              placeholder="örn. 1800-2200m"
+              className="mt-1 w-full border border-border-muted bg-background px-3 py-2"
+            />
+          </label>
+          <label className="block text-sm">
             <span className="mono text-[10px] uppercase text-muted">İşlem</span>
             <input
               value={form.process}
@@ -494,6 +619,179 @@ function ProductsPageInner() {
               className="mt-1 w-full border border-border-muted bg-background px-3 py-2"
             />
           </label>
+
+          <div className="md:col-span-2 space-y-3 border border-border-muted p-3">
+            <span className="mono text-[10px] uppercase text-muted">
+              Kavrum logu (Roaster&apos;s Log)
+            </span>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="block text-sm">
+                <span className="mono text-[10px] uppercase text-muted">
+                  Roast Time
+                </span>
+                <input
+                  value={form.roastTime}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, roastTime: e.target.value }))
+                  }
+                  placeholder="örn. 8:42"
+                  className="mt-1 w-full border border-border-muted bg-background px-3 py-2"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mono text-[10px] uppercase text-muted">
+                  Drop Temp
+                </span>
+                <input
+                  value={form.dropTemp}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, dropTemp: e.target.value }))
+                  }
+                  placeholder="örn. 204°C"
+                  className="mt-1 w-full border border-border-muted bg-background px-3 py-2"
+                />
+              </label>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="mono text-[10px] uppercase text-muted">
+                  Fazlar
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      roastPhases: [...f.roastPhases, emptyPhase()],
+                    }))
+                  }
+                  className="text-xs text-accent hover:underline"
+                >
+                  + Faz
+                </button>
+              </div>
+              {form.roastPhases.map((phase, i) => (
+                <div
+                  key={i}
+                  className="grid gap-2 border border-border-muted/60 p-2 md:grid-cols-5"
+                >
+                  <input
+                    placeholder="Phase"
+                    value={phase.phase}
+                    onChange={(e) =>
+                      setForm((f) => {
+                        const roastPhases = [...f.roastPhases];
+                        roastPhases[i] = {
+                          ...roastPhases[i],
+                          phase: e.target.value,
+                        };
+                        return { ...f, roastPhases };
+                      })
+                    }
+                    className="border border-border-muted bg-background px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    placeholder="Duration"
+                    value={phase.duration}
+                    onChange={(e) =>
+                      setForm((f) => {
+                        const roastPhases = [...f.roastPhases];
+                        roastPhases[i] = {
+                          ...roastPhases[i],
+                          duration: e.target.value,
+                        };
+                        return { ...f, roastPhases };
+                      })
+                    }
+                    className="border border-border-muted bg-background px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    placeholder="Target ΔT"
+                    value={phase.target}
+                    onChange={(e) =>
+                      setForm((f) => {
+                        const roastPhases = [...f.roastPhases];
+                        roastPhases[i] = {
+                          ...roastPhases[i],
+                          target: e.target.value,
+                        };
+                        return { ...f, roastPhases };
+                      })
+                    }
+                    className="border border-border-muted bg-background px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    placeholder="Airflow %"
+                    value={phase.airflow}
+                    onChange={(e) =>
+                      setForm((f) => {
+                        const roastPhases = [...f.roastPhases];
+                        roastPhases[i] = {
+                          ...roastPhases[i],
+                          airflow: e.target.value,
+                        };
+                        return { ...f, roastPhases };
+                      })
+                    }
+                    className="border border-border-muted bg-background px-2 py-1.5 text-sm"
+                  />
+                  <button
+                    type="button"
+                    disabled={form.roastPhases.length <= 1}
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        roastPhases: f.roastPhases.filter((_, idx) => idx !== i),
+                      }))
+                    }
+                    className="text-xs text-danger hover:underline disabled:opacity-30"
+                  >
+                    Sil
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted">
+              Boş bırakılırsa ürün detayında kavrum logu gösterilmez.
+            </p>
+          </div>
+
+          <div className="md:col-span-2 space-y-3 border border-border-muted p-3">
+            <span className="mono text-[10px] uppercase text-muted">
+              Flavor Geometry (0–1)
+            </span>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              {FLAVOR_AXES.map(({ key, label }) => (
+                <label key={key} className="block text-sm">
+                  <span className="mono text-[10px] uppercase text-muted">
+                    {label}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={form.flavorGeometry[key]}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        flavorGeometry: {
+                          ...f.flavorGeometry,
+                          [key]: e.target.value,
+                        },
+                      }))
+                    }
+                    placeholder="örn. 0.7"
+                    className="mt-1 w-full border border-border-muted bg-background px-3 py-2"
+                  />
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-muted">
+              Boş bırakılırsa radar grafiği ürün detayında gizlenir.
+            </p>
+          </div>
+
           <div className="md:col-span-2">
             <MediaUpload
               label="Ana görsel"

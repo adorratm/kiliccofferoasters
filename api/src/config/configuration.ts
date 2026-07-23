@@ -78,9 +78,25 @@ export default () => ({
     url: process.env.REDIS_URL || 'redis://localhost:6379',
   },
   mail: {
-    resendApiKey: process.env.RESEND_API_KEY || '',
-    from: process.env.MAIL_FROM || 'Kılıç Coffee <onboarding@resend.dev>',
+    from:
+      process.env.MAIL_FROM ||
+      'Kılıç Coffee Roaster <info@kiliccoffeeroaster.com.tr>',
+    host: process.env.MAIL_HOST || '',
+    port: parseInt(process.env.MAIL_PORT || '587', 10),
+    /** true = 465 SSL; false = 587 STARTTLS */
+    secure: process.env.MAIL_SECURE === 'true',
+    user: process.env.MAIL_USER || '',
+    pass: process.env.MAIL_PASS || '',
   },
+  whatsapp: {
+    /** console | meta — otomatik sipariş WhatsApp’ı için Meta Cloud API */
+    provider: process.env.WHATSAPP_PROVIDER || 'console',
+    /** İş / WhatsApp Business numarası */
+    from: process.env.WHATSAPP_FROM || '+905412147963',
+    metaToken: process.env.META_WA_TOKEN || '',
+    metaPhoneNumberId: process.env.META_WA_PHONE_NUMBER_ID || '',
+  },
+  /** @deprecated SMS kaldırıldı */
   sms: {
     provider: process.env.SMS_PROVIDER || 'console',
     twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || '',

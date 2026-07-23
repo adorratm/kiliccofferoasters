@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import nodemailer, { Transporter } from 'nodemailer';
 
 export type SendEmailInput = {
   to: string;
@@ -12,31 +12,47 @@ export type SendEmailInput = {
 @Injectable()
 export class EmailProvider {
   private readonly logger = new Logger(EmailProvider.name);
-  private readonly resend: Resend | null;
+  private readonly transporter: Transporter | null;
   private readonly from: string;
 
   constructor(private readonly config: ConfigService) {
-    const apiKey = this.config.get<string>('mail.resendApiKey') || '';
     this.from =
       this.config.get<string>('mail.from') ||
-      'Kılıç Coffee <onboarding@resend.dev>';
-    this.resend = apiKey ? new Resend(apiKey) : null;
-    if (!this.resend) {
+      'Kılıç Coffee Roaster <info@kiliccoffeeroaster.com.tr>';
+
+    const host = this.config.get<string>('mail.host') || '';
+    const user = this.config.get<string>('mail.user') || '';
+    const pass = this.config.get<string>('mail.pass') || '';
+    const port = this.config.get<number>('mail.port') || 587;
+    const secure = this.config.get<boolean>('mail.secure') === true;
+
+    if (host && user && pass) {
+      this.transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+      });
+      this.logger.log(
+        `SMTP e-posta hazır: ${host}:${port} (from=${this.from})`,
+      );
+    } else {
+      this.transporter = null;
       this.logger.warn(
-        'RESEND_API_KEY yok — e-postalar konsola yazılacak (ücretsiz fallback)',
+        'SMTP ayarları yok (MAIL_HOST / MAIL_USER / MAIL_PASS) — e-postalar konsola yazılacak',
       );
     }
   }
 
   async send(input: SendEmailInput): Promise<{ id?: string }> {
-    if (!this.resend) {
+    if (!this.transporter) {
       this.logger.log(
         `[console-email] to=${input.to} subject=${input.subject}\n${input.text || input.html}`,
       );
       return { id: `console-${Date.now()}` };
     }
 
-    const result = await this.resend.emails.send({
+    const info = await this.transporter.sendMail({
       from: this.from,
       to: input.to,
       subject: input.subject,
@@ -44,10 +60,7 @@ export class EmailProvider {
       text: input.text,
     });
 
-    if (result.error) {
-      throw new Error(result.error.message);
-    }
-
-    return { id: result.data?.id };
+    this.logger.log(`E-posta gönderildi: ${info.messageId} → ${input.to}`);
+    return { id: info.messageId };
   }
 }

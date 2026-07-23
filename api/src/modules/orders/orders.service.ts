@@ -306,7 +306,7 @@ export class OrdersService {
       await this.notifications.enqueueOrderStatus(
         saved.id,
         template,
-        ['email', 'sms'],
+        ['email', 'whatsapp'],
         {
           status: dto.status,
           statusLabel: statusLabel(dto.status),

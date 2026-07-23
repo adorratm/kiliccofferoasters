@@ -125,7 +125,7 @@ export class ShippingService {
       order.id,
       shipment.id,
       'shipment_created',
-      ['email', 'sms'],
+      ['email', 'whatsapp'],
       {
         status: shipment.status,
         statusLabel: statusLabel(shipment.status),
@@ -194,7 +194,7 @@ export class ShippingService {
           shipment.orderId,
           shipment.id,
           'shipment_status',
-          ['email', 'sms'],
+          ['email', 'whatsapp'],
           {
             status: result.status,
             statusLabel: statusLabel(result.status),

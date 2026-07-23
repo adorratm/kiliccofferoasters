@@ -13,16 +13,25 @@ import {
 import {
   QUEUE_NOTIFICATIONS,
   NotificationJobPayload,
+  NotificationChannelName,
 } from '@modules/queues/queue.constants';
 import { EmailProvider } from '@modules/notifications/providers/email.provider';
-import { SmsProviderRouter } from '@modules/notifications/providers/sms.provider';
+import { WhatsAppProviderRouter } from '@modules/notifications/providers/whatsapp.provider';
 import {
+  buildAbandonedCartEmail,
   buildEmailContent,
-  buildSmsBody,
+  buildLowStockEmail,
+  buildWhatsAppBody,
   resolveFrontendUrl,
   statusLabel,
 } from '@modules/notifications/notification.templates';
 import { ConfigService } from '@nestjs/config';
+import { normalizePhoneE164 } from '@common/utils/phone';
+
+const DEFAULT_ORDER_CHANNELS: NotificationChannelName[] = [
+  'email',
+  'whatsapp',
+];
 
 @Injectable()
 export class NotificationsService {
@@ -32,14 +41,14 @@ export class NotificationsService {
     @InjectQueue(QUEUE_NOTIFICATIONS) private readonly notifyQueue: Queue,
     @InjectEntityManager() private readonly em: EntityManager,
     private readonly email: EmailProvider,
-    private readonly sms: SmsProviderRouter,
+    private readonly whatsapp: WhatsAppProviderRouter,
     private readonly config: ConfigService,
   ) {}
 
   async enqueueOrderStatus(
     orderId: string,
     template: string,
-    channels: Array<'email' | 'sms'> = ['email', 'sms'],
+    channels: NotificationChannelName[] = DEFAULT_ORDER_CHANNELS,
     context: Record<string, unknown> = {},
   ) {
     const payload: NotificationJobPayload = {
@@ -60,7 +69,7 @@ export class NotificationsService {
     orderId: string,
     shipmentId: string,
     template: string,
-    channels: Array<'email' | 'sms'> = ['email', 'sms'],
+    channels: NotificationChannelName[] = DEFAULT_ORDER_CHANNELS,
     context: Record<string, unknown> = {},
   ) {
     const payload: NotificationJobPayload = {
@@ -180,8 +189,9 @@ export class NotificationsService {
     for (const channel of payload.channels) {
       if (channel === 'email') {
         await this.sendEmail(order, shipment, payload.template, ctx);
-      } else if (channel === 'sms') {
-        await this.sendSms(order, shipment, payload.template, ctx);
+      } else if (channel === 'whatsapp' || channel === 'sms') {
+        // sms kanalı geriye dönük işler için WhatsApp'a yönlendirilir
+        await this.sendWhatsApp(order, shipment, payload.template, ctx);
       }
     }
   }
@@ -222,20 +232,22 @@ export class NotificationsService {
     }
   }
 
-  private async sendSms(
+  private async sendWhatsApp(
     order: Order,
     shipment: Shipment | null,
     template: string,
-    ctx: Parameters<typeof buildSmsBody>[1],
+    ctx: Parameters<typeof buildWhatsAppBody>[1],
   ) {
     if (!order.customerPhone) {
-      this.logger.warn(`Order ${order.id} has no phone — skip SMS`);
+      this.logger.warn(`Order ${order.id} has no phone — skip WhatsApp`);
       return;
     }
 
+    const to = normalizePhoneE164(order.customerPhone) || order.customerPhone;
+
     const log = this.em.create(NotificationLog, {
-      channel: NotificationChannel.SMS,
-      recipient: order.customerPhone,
+      channel: NotificationChannel.WHATSAPP,
+      recipient: to,
       template,
       orderId: order.id,
       shipmentId: shipment?.id ?? null,
@@ -245,11 +257,8 @@ export class NotificationsService {
     await this.em.save(log);
 
     try {
-      const body = buildSmsBody(template, ctx);
-      const result = await this.sms.send({
-        to: order.customerPhone,
-        body,
-      });
+      const body = buildWhatsAppBody(template, ctx);
+      const result = await this.whatsapp.send({ to, body });
       log.status = NotificationStatus.SENT;
       log.providerMessageId = result.id ?? null;
       await this.em.save(log);
@@ -297,14 +306,12 @@ export class NotificationsService {
     await this.em.save(log);
 
     try {
-      const subject = 'Sepetinizde kahve sizi bekliyor';
-      const html = `<p>Merhaba ${name},</p><p>Sepetinizde <strong>${itemCount}</strong> ürün kaldı. Siparişinizi tamamlayın — taze kavrumlar tükenmeden.</p><p><a href="${cartUrl}">Sepete dön</a></p><p style="color:#888;font-size:12px;margin-top:24px">Kılıç Coffee Roaster · Torbalı / İzmir</p>`;
-      const text = `Merhaba ${name}, sepetinizde ${itemCount} ürün var: ${cartUrl}`;
+      const content = buildAbandonedCartEmail({ name, itemCount, cartUrl });
       const result = await this.email.send({
         to: email,
-        subject,
-        html,
-        text,
+        subject: content.subject,
+        html: content.html,
+        text: content.text,
       });
       log.status = NotificationStatus.SENT;
       log.providerMessageId = result.id ?? null;
@@ -327,14 +334,12 @@ export class NotificationsService {
     }
 
     const ctx = payload.context || {};
-    const productName =
-      typeof ctx.name === 'string' ? ctx.name : 'Ürün';
+    const productName = typeof ctx.name === 'string' ? ctx.name : 'Ürün';
     const variantLabel =
       typeof ctx.weightLabel === 'string' ? ctx.weightLabel : null;
     const sku = typeof ctx.sku === 'string' ? ctx.sku : null;
     const stock = typeof ctx.stock === 'number' ? ctx.stock : 0;
-    const productId =
-      typeof ctx.productId === 'string' ? ctx.productId : null;
+    const productId = typeof ctx.productId === 'string' ? ctx.productId : null;
     const variantId =
       typeof ctx.variantId === 'string' ? ctx.variantId : null;
     const adminUrl =
@@ -362,14 +367,17 @@ export class NotificationsService {
     await this.em.save(log);
 
     try {
-      const subject = `Düşük stok: ${label} (${stock})`;
-      const html = `<p>Merhaba,</p><p><strong>${label}</strong> stok seviyesi eşik altına düştü.</p><ul><li>Stok: <strong>${stock}</strong></li>${sku ? `<li>SKU: ${sku}</li>` : ''}</ul><p><a href="${adminUrl}/urunler">Ürünleri yönet</a></p><p style="color:#888;font-size:12px;margin-top:24px">Kılıç Coffee Roaster · Admin uyarı</p>`;
-      const text = `Düşük stok: ${label} — kalan ${stock}${sku ? ` (SKU: ${sku})` : ''}. Yönet: ${adminUrl}/urunler`;
+      const content = buildLowStockEmail({
+        label,
+        stock,
+        sku,
+        adminUrl,
+      });
       const result = await this.email.send({
         to: email,
-        subject,
-        html,
-        text,
+        subject: content.subject,
+        html: content.html,
+        text: content.text,
       });
       log.status = NotificationStatus.SENT;
       log.providerMessageId = result.id ?? null;

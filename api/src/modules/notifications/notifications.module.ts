@@ -5,11 +5,10 @@ import { NotificationsService } from '@modules/notifications/notifications.servi
 import { NotificationsController } from '@modules/notifications/notifications.controller';
 import { EmailProvider } from '@modules/notifications/providers/email.provider';
 import {
-  ConsoleSmsProvider,
-  TwilioSmsProvider,
-  NetgsmSmsProvider,
-  SmsProviderRouter,
-} from '@modules/notifications/providers/sms.provider';
+  ConsoleWhatsAppProvider,
+  MetaWhatsAppProvider,
+  WhatsAppProviderRouter,
+} from '@modules/notifications/providers/whatsapp.provider';
 
 @Module({
   imports: [BullModule.registerQueue({ name: QUEUE_NOTIFICATIONS })],
@@ -17,10 +16,9 @@ import {
   providers: [
     NotificationsService,
     EmailProvider,
-    ConsoleSmsProvider,
-    TwilioSmsProvider,
-    NetgsmSmsProvider,
-    SmsProviderRouter,
+    ConsoleWhatsAppProvider,
+    MetaWhatsAppProvider,
+    WhatsAppProviderRouter,
   ],
   exports: [NotificationsService, BullModule],
 })

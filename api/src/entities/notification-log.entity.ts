@@ -4,6 +4,7 @@ import { BaseEntity } from '@entities/base.entity';
 export enum NotificationChannel {
   EMAIL = 'email',
   SMS = 'sms',
+  WHATSAPP = 'whatsapp',
 }
 
 export enum NotificationStatus {
@@ -46,6 +47,11 @@ export class NotificationLog extends BaseEntity {
   errorMessage!: string | null;
 
   @Index()
-  @Column({ name: 'provider_message_id', type: 'varchar', length: 200, nullable: true })
+  @Column({
+    name: 'provider_message_id',
+    type: 'varchar',
+    length: 200,
+    nullable: true,
+  })
   providerMessageId!: string | null;
 }
