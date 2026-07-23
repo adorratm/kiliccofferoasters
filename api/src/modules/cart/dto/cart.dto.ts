@@ -1,4 +1,5 @@
 import {
+  IsEmail,
   IsIn,
   IsInt,
   IsOptional,
@@ -39,4 +40,10 @@ export class UpdateCartItemDto {
   @IsOptional()
   @IsIn([...ACCEPTED_GRIND_OPTIONS])
   grindOption?: string;
+}
+
+export class SetGuestEmailDto {
+  @ApiProperty({ example: 'misafir@email.com' })
+  @IsEmail()
+  email!: string;
 }

@@ -60,6 +60,21 @@ export class User extends BaseEntity {
   @Column({ name: 'email_verified', type: 'boolean', default: false })
   emailVerified!: boolean;
 
+  @Column({
+    name: 'password_reset_token_hash',
+    type: 'varchar',
+    length: 128,
+    nullable: true,
+  })
+  passwordResetTokenHash!: string | null;
+
+  @Column({
+    name: 'password_reset_expires_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  passwordResetExpiresAt!: Date | null;
+
   @OneToMany(() => Address, (address) => address.user)
   addresses!: Address[];
 

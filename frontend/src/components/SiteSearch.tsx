@@ -16,7 +16,6 @@ import type { SearchResponse } from "@/lib/types";
 const SEE_ALL: Record<string, (q: string) => string> = {
   products: (q) => `/urunler?q=${encodeURIComponent(q)}`,
   blog: () => "/blog",
-  content: () => "/",
   legal: () => "/kvkk",
 };
 

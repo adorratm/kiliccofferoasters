@@ -8,12 +8,14 @@ import {
   type FormEvent,
 } from "react";
 import {
+  changePassword,
   createAddress,
   deleteAddress,
   getMe,
   getMyAddresses,
   getMyOrders,
   updateAddress,
+  ApiError,
 } from "@/lib/api";
 import { Reveal } from "@/components/Reveal";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -49,6 +51,12 @@ export default function AccountPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPassword2, setNewPassword2] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwOk, setPwOk] = useState<string | null>(null);
 
   async function reload(token: string) {
     const [me, myOrders, myAddresses] = await Promise.all([
@@ -80,6 +88,44 @@ export default function AccountPage() {
     clearToken();
     clearWishlistCache();
     router.push("/giris");
+  }
+
+  async function onChangePassword(e: FormEvent) {
+    e.preventDefault();
+    const token = getToken();
+    if (!token || !user) return;
+    if (newPassword !== newPassword2) {
+      setPwError("Yeni şifreler eşleşmiyor.");
+      return;
+    }
+    if (user.hasPassword && !currentPassword) {
+      setPwError("Mevcut şifreyi girin.");
+      return;
+    }
+    setPwBusy(true);
+    setPwError(null);
+    setPwOk(null);
+    try {
+      await changePassword(token, {
+        newPassword,
+        ...(user.hasPassword ? { currentPassword } : {}),
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setNewPassword2("");
+      setPwOk(
+        user.hasPassword
+          ? "Şifreniz güncellendi."
+          : "Şifreniz belirlendi. Artık e-posta ile de giriş yapabilirsiniz.",
+      );
+      await reload(token);
+    } catch (err) {
+      setPwError(
+        err instanceof ApiError ? err.message : "Şifre güncellenemedi",
+      );
+    } finally {
+      setPwBusy(false);
+    }
   }
 
   function startCreate() {
@@ -232,6 +278,72 @@ export default function AccountPage() {
           Alışverişe devam
         </Link>
       </div>
+
+      <section className="mt-12">
+        <Reveal>
+          <h2 className="mb-6 font-display text-2xl">
+            {user.hasPassword ? "Şifre değiştir" : "Şifre belirle"}
+          </h2>
+        </Reveal>
+        <Reveal delay={40}>
+          <form
+            onSubmit={onChangePassword}
+            className="industrial-border bg-surface-container-low max-w-xl space-y-4 p-6"
+          >
+            {!user.hasPassword ? (
+              <p className="font-meta text-[11px] uppercase leading-relaxed text-secondary">
+                Google ile giriş yaptınız. İsterseniz bir şifre belirleyin;
+                ardından e-posta ile de oturum açabilirsiniz. Google bağlantınız
+                korunur.
+              </p>
+            ) : null}
+            {user.hasPassword ? (
+              <Field
+                label="Mevcut şifre"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                required
+                type="password"
+              />
+            ) : null}
+            <Field
+              label="Yeni şifre"
+              value={newPassword}
+              onChange={setNewPassword}
+              required
+              type="password"
+            />
+            <Field
+              label="Yeni şifre (tekrar)"
+              value={newPassword2}
+              onChange={setNewPassword2}
+              required
+              type="password"
+            />
+            {pwError ? (
+              <p className="font-meta text-[11px] uppercase text-error">
+                {pwError}
+              </p>
+            ) : null}
+            {pwOk ? (
+              <p className="font-meta text-[11px] uppercase text-primary">
+                {pwOk}
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={pwBusy}
+              className="btn-cta px-6 py-3 text-xs disabled:opacity-50"
+            >
+              {pwBusy
+                ? "Kaydediliyor…"
+                : user.hasPassword
+                  ? "Şifreyi güncelle"
+                  : "Şifreyi belirle"}
+            </button>
+          </form>
+        </Reveal>
+      </section>
 
       <section className="mt-12">
         <Reveal className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -564,22 +676,28 @@ function Field({
   onChange,
   required,
   placeholder,
+  type = "text",
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
   placeholder?: string;
+  type?: string;
 }) {
   return (
     <div>
       <label className="field-label">{label}</label>
       <input
+        type={type}
         required={required}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className="field-input"
+        autoComplete={
+          type === "password" ? "current-password" : undefined
+        }
       />
     </div>
   );

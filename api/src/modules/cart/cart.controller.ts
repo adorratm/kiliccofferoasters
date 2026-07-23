@@ -10,7 +10,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CartService } from '@modules/cart/cart.service';
-import { AddCartItemDto, UpdateCartItemDto } from '@modules/cart/dto/cart.dto';
+import {
+  AddCartItemDto,
+  SetGuestEmailDto,
+  UpdateCartItemDto,
+} from '@modules/cart/dto/cart.dto';
 import { Public } from '@common/decorators/public.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@entities/user.entity';
@@ -30,6 +34,19 @@ export class CartController {
     @Headers('x-session-id') sessionId?: string,
   ) {
     return this.cartService.getCart(user?.id, sessionId);
+  }
+
+  @Public()
+  @Patch('guest-email')
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Session-Id', required: false })
+  @ApiOperation({ summary: 'Misafir sepet e-postası (terk edilen sepet)' })
+  setGuestEmail(
+    @Body() dto: SetGuestEmailDto,
+    @CurrentUser() user: User | undefined,
+    @Headers('x-session-id') sessionId?: string,
+  ) {
+    return this.cartService.setGuestEmail(dto.email, user?.id, sessionId);
   }
 
   @Public()

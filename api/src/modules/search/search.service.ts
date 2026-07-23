@@ -8,7 +8,6 @@ import { ContactMessage } from '@entities/contact-message.entity';
 import { MediaAsset } from '@entities/media-asset.entity';
 import { NewsletterSubscriber } from '@entities/newsletter-subscriber.entity';
 import { LegalDocument } from '@entities/legal-document.entity';
-import { ContentSection } from '@entities/content-section.entity';
 import { BlogPost } from '@entities/blog-post.entity';
 
 export type SearchHit = {
@@ -35,41 +34,37 @@ export class SearchService {
     }
     const like = `%${term}%`;
     const per = Math.min(limit, 12);
+    const now = new Date();
 
-    const [products, sections, legal, posts] = await Promise.all([
+    const [products, legal, posts] = await Promise.all([
       this.em
         .createQueryBuilder(Product, 'p')
-        .where('p.is_active = true')
+        .where('p.isActive = :active', { active: true })
         .andWhere(
-          `(p.name ILIKE :like OR p.slug ILIKE :like OR COALESCE(p.origin_country,'') ILIKE :like OR COALESCE(p.origin_region,'') ILIKE :like OR COALESCE(p.roast_level,'') ILIKE :like OR COALESCE(p.batch_id,'') ILIKE :like)`,
+          `(p.name ILIKE :like OR p.slug ILIKE :like OR COALESCE(p.originCountry,'') ILIKE :like OR COALESCE(p.originRegion,'') ILIKE :like OR COALESCE(p.roastLevel,'') ILIKE :like OR COALESCE(p.batchId,'') ILIKE :like)`,
           { like },
+        )
+        .andWhere(
+          `EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = true)`,
         )
         .orderBy('p.name', 'ASC')
         .take(per)
         .getMany(),
       this.em
-        .createQueryBuilder(ContentSection, 's')
-        .where('s.is_published = true')
-        .andWhere(
-          `(COALESCE(s.title,'') ILIKE :like OR s.section_key ILIKE :like OR s.page ILIKE :like)`,
-          { like },
-        )
-        .take(Math.min(per, 5))
-        .getMany(),
-      this.em
         .createQueryBuilder(LegalDocument, 'd')
-        .where('d.is_published = true')
+        .where('d.isPublished = :published', { published: true })
         .andWhere(`(d.title ILIKE :like OR d.slug ILIKE :like)`, { like })
         .take(Math.min(per, 5))
         .getMany(),
       this.em
         .createQueryBuilder(BlogPost, 'b')
-        .where('b.is_published = true')
+        .where('b.isPublished = :published', { published: true })
+        .andWhere('(b.publishedAt IS NULL OR b.publishedAt <= :now)', { now })
         .andWhere(
-          `(b.title ILIKE :like OR b.slug ILIKE :like OR COALESCE(b.excerpt,'') ILIKE :like OR COALESCE(b.author_name,'') ILIKE :like)`,
+          `(b.title ILIKE :like OR b.slug ILIKE :like OR COALESCE(b.excerpt,'') ILIKE :like OR COALESCE(b.authorName,'') ILIKE :like)`,
           { like },
         )
-        .orderBy('b.published_at', 'DESC')
+        .orderBy('b.publishedAt', 'DESC')
         .take(per)
         .getMany(),
     ]);
@@ -86,20 +81,6 @@ export class SearchService {
           title: p.name,
           subtitle: [p.originCountry, p.roastLevel].filter(Boolean).join(' · '),
           href: `/urunler/${p.slug}`,
-        })),
-      });
-    }
-
-    if (sections.length) {
-      groups.push({
-        type: 'content',
-        label: 'İçerik',
-        items: sections.map((s) => ({
-          type: 'content',
-          id: s.id,
-          title: s.title || s.sectionKey,
-          subtitle: s.page,
-          href: s.page === 'home' ? '/' : `/${s.page}`,
         })),
       });
     }

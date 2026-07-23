@@ -180,6 +180,57 @@ export function buildEmailContent(
         }),
         text: `Merhaba ${name}, ${orderNo} durumu: ${label}. ${ordersUrl}`,
       };
+    case 'return_requested':
+      return {
+        subject: `İade / iptal talebiniz alındı — ${orderNo}`,
+        html: renderBrandedEmail({
+          title: 'Talep alındı',
+          greeting: `Merhaba ${name},`,
+          paragraphs: [
+            `<strong style="color:#f5efe6;">${escapeHtml(orderNo)}</strong> için iptal/iade talebiniz alındı. İnceleme sonrası size bilgi vereceğiz.`,
+          ],
+          metaRows: [
+            { label: 'Sipariş', value: orderNo },
+            { label: 'Durum', value: 'Talep incelemede' },
+          ],
+          cta: { label: 'Siparişlerim', href: ordersUrl },
+        }),
+        text: `Merhaba ${name}, ${orderNo} iptal/iade talebiniz alındı. ${ordersUrl}`,
+      };
+    case 'return_approved':
+      return {
+        subject: `İade / iptal talebiniz onaylandı — ${orderNo}`,
+        html: renderBrandedEmail({
+          title: 'Talep onaylandı',
+          greeting: `Merhaba ${name},`,
+          paragraphs: [
+            `<strong style="color:#f5efe6;">${escapeHtml(orderNo)}</strong> için talebiniz onaylandı. Ödeme iadesi tamamlandığında bildirim alacaksınız.`,
+          ],
+          metaRows: [
+            { label: 'Sipariş', value: orderNo },
+            { label: 'Durum', value: label || 'Onaylandı' },
+          ],
+          cta: { label: 'Siparişlerim', href: ordersUrl },
+        }),
+        text: `Merhaba ${name}, ${orderNo} iptal/iade talebiniz onaylandı. ${ordersUrl}`,
+      };
+    case 'return_rejected':
+      return {
+        subject: `İade / iptal talebiniz — ${orderNo}`,
+        html: renderBrandedEmail({
+          title: 'Talep sonucu',
+          greeting: `Merhaba ${name},`,
+          paragraphs: [
+            `<strong style="color:#f5efe6;">${escapeHtml(orderNo)}</strong> için talebiniz şu an onaylanamadı. Detay için bizimle iletişime geçebilirsiniz.`,
+          ],
+          metaRows: [
+            { label: 'Sipariş', value: orderNo },
+            { label: 'Durum', value: 'Reddedildi' },
+          ],
+          cta: { label: 'Siparişlerim', href: ordersUrl },
+        }),
+        text: `Merhaba ${name}, ${orderNo} iptal/iade talebiniz onaylanamadı. ${ordersUrl}`,
+      };
     case 'shipment_created':
       return {
         subject: `Kargoya verildi — ${orderNo}`,
@@ -266,18 +317,42 @@ export function buildWhatsAppBody(
 /** @deprecated SMS kaldırıldı; geriye dönük importlar için alias */
 export const buildSmsBody = buildWhatsAppBody;
 
+export function buildPasswordResetEmail(input: {
+  name: string;
+  resetUrl: string;
+}): { subject: string; html: string; text: string } {
+  return {
+    subject: 'Şifre sıfırlama',
+    html: renderBrandedEmail({
+      title: 'Şifre sıfırlama',
+      greeting: `Merhaba ${input.name},`,
+      paragraphs: [
+        'Hesabınız için şifre sıfırlama talebi aldık. Bağlantı 1 saat geçerlidir. Siz talep etmediyseniz bu e-postayı yok sayabilirsiniz.',
+      ],
+      cta: { label: 'Şifreyi sıfırla', href: input.resetUrl },
+    }),
+    text: `Merhaba ${input.name}, şifrenizi sıfırlamak için: ${input.resetUrl} (1 saat geçerli)`,
+  };
+}
+
 export function buildAbandonedCartEmail(input: {
   name: string;
   itemCount: number;
   cartUrl: string;
+  reminder?: 1 | 2;
 }): { subject: string; html: string; text: string } {
+  const isSecond = input.reminder === 2;
   return {
-    subject: 'Sepetinizde kahve sizi bekliyor',
+    subject: isSecond
+      ? 'Sepetiniz hâlâ sizi bekliyor'
+      : 'Sepetinizde kahve sizi bekliyor',
     html: renderBrandedEmail({
-      title: 'Sepet hatırlatması',
+      title: isSecond ? 'Son hatırlatma' : 'Sepet hatırlatması',
       greeting: `Merhaba ${input.name},`,
       paragraphs: [
-        `Sepetinizde <strong style="color:#f5efe6;">${input.itemCount}</strong> ürün kaldı. Siparişinizi tamamlayın — taze kavrumlar tükenmeden.`,
+        isSecond
+          ? `Sepetinizdeki <strong style="color:#f5efe6;">${input.itemCount}</strong> ürün hâlâ sizi bekliyor. Siparişinizi tamamlamak için son bir hatırlatma.`
+          : `Sepetinizde <strong style="color:#f5efe6;">${input.itemCount}</strong> ürün kaldı. Siparişinizi tamamlayın — taze kavrumlar tükenmeden.`,
       ],
       cta: { label: 'Sepete dön', href: input.cartUrl },
     }),

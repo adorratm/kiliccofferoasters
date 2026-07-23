@@ -104,8 +104,10 @@ export default () => ({
     defaultFee: parseFloat(process.env.DEFAULT_SHIPPING_FEE || '89.90'),
   },
   abandonedCart: {
-    /** Sepet güncellenmeden kaç saat sonra hatırlatma (varsayılan 4) */
+    /** Sepet güncellenmeden kaç saat sonra 1. hatırlatma (varsayılan 4) */
     hours: parseInt(process.env.ABANDONED_CART_HOURS || '4', 10),
+    /** 1. hatırlatmadan kaç saat sonra 2. hatırlatma (varsayılan 24) */
+    secondHours: parseInt(process.env.ABANDONED_CART_SECOND_HOURS || '24', 10),
   },
   marketplaceSync: {
     enabled: process.env.MARKETPLACE_SYNC_ENABLED !== 'false',

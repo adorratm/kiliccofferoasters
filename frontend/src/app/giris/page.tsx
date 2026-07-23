@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -71,6 +72,14 @@ function LoginInner() {
           autoComplete="current-password"
           required
         />
+        <div className="-mt-2 text-right">
+          <Link
+            href="/sifremi-unuttum"
+            className="font-meta text-[10px] uppercase tracking-widest text-secondary hover:text-primary"
+          >
+            Şifremi unuttum
+          </Link>
+        </div>
         <button
           type="submit"
           disabled={loading}

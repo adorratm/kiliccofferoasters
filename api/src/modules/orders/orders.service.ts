@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -15,20 +16,30 @@ import { Payment, PaymentStatus } from '@entities/payment.entity';
 import { ShippingProviderConfig } from '@entities/shipping-provider-config.entity';
 import { ShippingProviderCode } from '@entities/shipment.entity';
 import {
+  ReturnRequest,
+  ReturnRequestStatus,
+  ReturnRequestType,
+} from '@entities/return-request.entity';
+import {
   CreateOrderDto,
+  CreateReturnRequestDto,
   GuestOrderLookupDto,
   OrderQueryDto,
+  ReviewReturnRequestDto,
   UpdateOrderStatusDto,
 } from '@modules/orders/dto/orders.dto';
 import { NotificationsService } from '@modules/notifications/notifications.service';
 import { statusLabel } from '@modules/notifications/notification.templates';
 import { CouponsService } from '@modules/coupons/coupons.service';
 import { InventoryService } from '@modules/catalog/inventory.service';
+import { PaytrService } from '@modules/payments/paytr.service';
 import { grindLabel } from '@common/constants/grind-options';
 import {
   paginateResult,
   PaginatedResult,
 } from '@common/utils/pagination';
+
+const RETURN_WINDOW_DAYS = 14;
 
 @Injectable()
 export class OrdersService {
@@ -40,6 +51,7 @@ export class OrdersService {
     private readonly config: ConfigService,
     private readonly coupons: CouponsService,
     private readonly inventory: InventoryService,
+    private readonly paytr: PaytrService,
   ) {}
 
   async createFromCart(
@@ -284,6 +296,9 @@ export class OrdersService {
     }
     const previous = order.status;
     order.status = dto.status;
+    if (dto.status === OrderStatus.DELIVERED && previous !== OrderStatus.DELIVERED) {
+      order.deliveredAt = new Date();
+    }
     const saved = await this.em.save(order);
 
     if (previous !== dto.status) {
@@ -315,6 +330,246 @@ export class OrdersService {
     }
 
     return saved;
+  }
+
+  async createReturnRequest(
+    orderId: string,
+    userId: string,
+    dto: CreateReturnRequestDto,
+  ): Promise<ReturnRequest> {
+    const order = await this.findById(orderId);
+    if (order.userId !== userId) {
+      throw new ForbiddenException('Bu siparişe erişim yok');
+    }
+
+    const open = await this.em.findOne(ReturnRequest, {
+      where: {
+        orderId,
+        status: ReturnRequestStatus.REQUESTED,
+      },
+    });
+    if (open) {
+      throw new BadRequestException('Bu sipariş için açık bir talep zaten var');
+    }
+
+    this.assertReturnEligible(order, dto.type);
+
+    const request = this.em.create(ReturnRequest, {
+      orderId,
+      userId,
+      type: dto.type,
+      status: ReturnRequestStatus.REQUESTED,
+      reason: dto.reason.trim(),
+      adminNote: null,
+      reviewedAt: null,
+      reviewedById: null,
+    });
+    const saved = await this.em.save(request);
+
+    await this.notifications.enqueueOrderStatus(
+      orderId,
+      'return_requested',
+      ['email'],
+      {
+        statusLabel:
+          dto.type === ReturnRequestType.CANCEL
+            ? 'İptal talebi'
+            : 'İade talebi',
+      },
+    );
+
+    return saved;
+  }
+
+  async listReturnRequestsForOrder(
+    orderId: string,
+    userId: string,
+    isAdmin: boolean,
+  ): Promise<ReturnRequest[]> {
+    const order = await this.findById(orderId);
+    if (!isAdmin && order.userId !== userId) {
+      throw new ForbiddenException('Bu siparişe erişim yok');
+    }
+    return this.em.find(ReturnRequest, {
+      where: { orderId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async listReturnRequestsAdmin(status?: string): Promise<ReturnRequest[]> {
+    const qb = this.em
+      .createQueryBuilder(ReturnRequest, 'r')
+      .leftJoinAndSelect('r.order', 'order')
+      .orderBy('r.created_at', 'DESC')
+      .take(100);
+
+    if (
+      status &&
+      Object.values(ReturnRequestStatus).includes(
+        status as ReturnRequestStatus,
+      )
+    ) {
+      qb.andWhere('r.status = :status', { status });
+    }
+
+    return qb.getMany();
+  }
+
+  async reviewReturnRequest(
+    requestId: string,
+    adminUserId: string,
+    dto: ReviewReturnRequestDto,
+  ): Promise<ReturnRequest> {
+    if (
+      dto.status !== ReturnRequestStatus.APPROVED &&
+      dto.status !== ReturnRequestStatus.REJECTED
+    ) {
+      throw new BadRequestException('Sadece onay veya red verilebilir');
+    }
+
+    const request = await this.em.findOne(ReturnRequest, {
+      where: { id: requestId },
+      relations: { order: true },
+    });
+    if (!request) {
+      throw new NotFoundException('İade talebi bulunamadı');
+    }
+    if (request.status !== ReturnRequestStatus.REQUESTED) {
+      throw new BadRequestException('Bu talep zaten incelenmiş');
+    }
+
+    request.status = dto.status;
+    request.adminNote = dto.adminNote?.trim() || null;
+    request.reviewedAt = new Date();
+    request.reviewedById = adminUserId;
+    let saved = await this.em.save(request);
+
+    if (dto.status === ReturnRequestStatus.APPROVED) {
+      const order = await this.findById(request.orderId);
+      const previous = order.status;
+      const targetStatus =
+        request.type === ReturnRequestType.CANCEL
+          ? OrderStatus.CANCELLED
+          : OrderStatus.REFUNDED;
+
+      // PayTR iadesi (ödeme alınmışsa)
+      if (
+        order.payment?.provider === 'paytr' &&
+        order.payment.conversationId &&
+        order.payment.status === PaymentStatus.SUCCESS
+      ) {
+        try {
+          const refundResult = await this.paytr.refund({
+            merchantOid: order.payment.conversationId,
+            returnAmount: order.payment.amount || order.total,
+            referenceNo: `RR-${request.id.slice(0, 8)}`,
+          });
+          order.payment.status = PaymentStatus.REFUNDED;
+          order.payment.rawResponse = {
+            ...(order.payment.rawResponse || {}),
+            refund: refundResult,
+          };
+          await this.em.save(order.payment);
+        } catch (err) {
+          this.logger.error(
+            `PayTR refund failed for order ${order.id}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+          throw new BadRequestException(
+            err instanceof Error
+              ? `Ödeme iadesi başarısız: ${err.message}`
+              : 'Ödeme iadesi başarısız',
+          );
+        }
+      }
+
+      order.status = targetStatus;
+      await this.em.save(order);
+
+      try {
+        await this.inventory.maybeRestoreOnStatusChange(
+          order.id,
+          previous,
+          targetStatus,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Stock restore on return approve failed for ${order.id}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+
+      saved.status = ReturnRequestStatus.COMPLETED;
+      saved = await this.em.save(saved);
+
+      await this.notifications.enqueueOrderStatus(
+        request.orderId,
+        'return_approved',
+        ['email'],
+        { statusLabel: statusLabel(targetStatus) },
+      );
+    } else {
+      await this.notifications.enqueueOrderStatus(
+        request.orderId,
+        'return_rejected',
+        ['email'],
+        { statusLabel: 'Reddedildi' },
+      );
+    }
+
+    return saved;
+  }
+
+  private assertReturnEligible(
+    order: Order,
+    type: ReturnRequestType,
+  ): void {
+    if (
+      order.status === OrderStatus.CANCELLED ||
+      order.status === OrderStatus.REFUNDED ||
+      order.status === OrderStatus.PENDING_PAYMENT
+    ) {
+      throw new BadRequestException(
+        'Bu sipariş durumunda iptal/iade talebi açılamaz',
+      );
+    }
+
+    if (type === ReturnRequestType.CANCEL) {
+      if (
+        order.status !== OrderStatus.PAID &&
+        order.status !== OrderStatus.PROCESSING
+      ) {
+        throw new BadRequestException(
+          'İptal yalnızca kargoya verilmeden önce mümkündür; teslim sonrası için iade seçin',
+        );
+      }
+      return;
+    }
+
+    if (
+      order.status !== OrderStatus.SHIPPED &&
+      order.status !== OrderStatus.DELIVERED
+    ) {
+      throw new BadRequestException(
+        'İade talebi yalnızca kargoya verilen veya teslim edilen siparişler için açılabilir',
+      );
+    }
+
+    const anchor =
+      order.deliveredAt ||
+      (order.status === OrderStatus.DELIVERED
+        ? order.updatedAt
+        : order.createdAt);
+    const deadline =
+      new Date(anchor).getTime() +
+      RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    if (Date.now() > deadline) {
+      throw new BadRequestException(
+        `Cayma süresi (${RETURN_WINDOW_DAYS} gün) dolmuş görünüyor`,
+      );
+    }
   }
 
   private async generateOrderNumber(): Promise<string> {

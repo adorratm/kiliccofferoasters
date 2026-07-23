@@ -102,6 +102,10 @@ export class Order extends BaseEntity {
   @Column({ name: 'stock_decremented', type: 'boolean', default: false })
   stockDecremented!: boolean;
 
+  /** Teslim tarihi — cayma süresi için */
+  @Column({ name: 'delivered_at', type: 'timestamptz', nullable: true })
+  deliveredAt!: Date | null;
+
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items!: OrderItem[];
 

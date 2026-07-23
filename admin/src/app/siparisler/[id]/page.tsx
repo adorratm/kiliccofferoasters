@@ -261,6 +261,14 @@ export default function OrderDetailPage() {
             ) : null}
           </div>
 
+          <p className="text-xs text-muted">
+            İptal/iade talepleri için{' '}
+            <a href="/iadeler" className="text-accent hover:underline">
+              İade Talepleri
+            </a>{' '}
+            sayfasına bakın.
+          </p>
+
           <form
             onSubmit={updateStatus}
             className="border border-border-muted bg-surface p-4 space-y-3"

@@ -118,6 +118,12 @@ export function ProductBuyBox({ product, demoMode = false }: Props) {
             variantId={selected?.id}
             grindOption={grind}
             disabled={disabled}
+            productName={product.name}
+            price={
+              selected
+                ? Number(selected.price)
+                : Number(product.basePrice)
+            }
             label={
               demoMode
                 ? "Demo mod"

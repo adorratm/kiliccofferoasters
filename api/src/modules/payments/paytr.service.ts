@@ -298,6 +298,70 @@ export class PaytrService {
     );
   }
 
+  /**
+   * PayTR iade API — https://www.paytr.com/odeme/iade
+   * return_amount: "199.90" formatında (TL, noktalı)
+   */
+  async refund(input: {
+    merchantOid: string;
+    returnAmount: string;
+    referenceNo?: string;
+  }): Promise<{ status: string; is_test?: number; err_msg?: string; mock?: boolean }> {
+    const amount = Number(input.returnAmount).toFixed(2);
+    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+      throw new BadRequestException('Geçersiz iade tutarı');
+    }
+
+    if (!this.isConfigured()) {
+      this.logger.log(
+        `[mock-paytr-refund] oid=${input.merchantOid} amount=${amount}`,
+      );
+      return { status: 'success', mock: true };
+    }
+
+    const merchantId = this.config.get<string>('paytr.merchantId')!;
+    const merchantKey = this.config.get<string>('paytr.merchantKey')!;
+    const merchantSalt = this.config.get<string>('paytr.merchantSalt')!;
+
+    const paytrToken = createHmac('sha256', merchantKey)
+      .update(merchantId + input.merchantOid + amount + merchantSalt)
+      .digest('base64');
+
+    const body = new URLSearchParams({
+      merchant_id: merchantId,
+      merchant_oid: input.merchantOid,
+      return_amount: amount,
+      paytr_token: paytrToken,
+    });
+    if (input.referenceNo) {
+      body.set('reference_no', input.referenceNo.slice(0, 64));
+    }
+
+    let result: { status: string; is_test?: number; err_msg?: string };
+    try {
+      const res = await fetch('https://www.paytr.com/odeme/iade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      });
+      result = (await res.json()) as typeof result;
+    } catch (err) {
+      this.logger.error('PayTR iade bağlantı hatası', err);
+      throw new ServiceUnavailableException('PayTR iade bağlantısı kurulamadı');
+    }
+
+    if (result.status !== 'success') {
+      this.logger.warn(
+        `PayTR iade başarısız oid=${input.merchantOid}: ${result.err_msg}`,
+      );
+      throw new BadRequestException(
+        result.err_msg || 'PayTR iade işlemi başarısız',
+      );
+    }
+
+    return result;
+  }
+
   private buildMerchantOid(order: Order): string {
     // PayTR: alfanümerik, max 64
     const base = `${order.orderNumber}${Date.now()}`.replace(

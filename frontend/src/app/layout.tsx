@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Anton, Inter, JetBrains_Mono } from "next/font/google";
 import { CookieBanner } from "@/components/CookieBanner";
+import { AnalyticsScripts } from "@/components/AnalyticsScripts";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getSiteSettings } from "@/lib/cms";
@@ -65,6 +66,7 @@ export default async function RootLayout({
         <main className="flex-1 pt-20">{children}</main>
         <SiteFooter settings={settings} />
         <CookieBanner />
+        <AnalyticsScripts />
       </body>
     </html>
   );

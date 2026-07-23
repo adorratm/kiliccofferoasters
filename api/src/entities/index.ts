@@ -9,6 +9,11 @@ export { Cart } from '@entities/cart.entity';
 export { CartItem } from '@entities/cart-item.entity';
 export { Order, OrderStatus } from '@entities/order.entity';
 export { OrderItem } from '@entities/order-item.entity';
+export {
+  ReturnRequest,
+  ReturnRequestType,
+  ReturnRequestStatus,
+} from '@entities/return-request.entity';
 export { Payment, PaymentStatus } from '@entities/payment.entity';
 export {
   Shipment,

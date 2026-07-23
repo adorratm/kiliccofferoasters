@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Reveal } from "@/components/Reveal";
 import { getToken } from "@/lib/auth";
+import { trackPurchase } from "@/lib/analytics";
 
 function SuccessContent() {
   const params = useSearchParams();
@@ -23,6 +24,10 @@ function SuccessContent() {
     }
     if (orderId) {
       sessionStorage.setItem("kilic_last_order_id", orderId);
+      trackPurchase({
+        id: orderId,
+        orderNumber,
+      });
     }
   }, [orderId, orderNumber]);
 

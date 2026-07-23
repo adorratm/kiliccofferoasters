@@ -1,5 +1,7 @@
 import {
   IsEmail,
+  IsEnum,
+  IsIn,
   IsInt,
   IsObject,
   IsOptional,
@@ -7,11 +9,16 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus } from '@entities/order.entity';
+import {
+  ReturnRequestStatus,
+  ReturnRequestType,
+} from '@entities/return-request.entity';
 
 export class AddressPayloadDto {
   @ApiProperty()
@@ -141,4 +148,28 @@ export class GuestOrderLookupDto {
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
   email!: string;
+}
+
+export class CreateReturnRequestDto {
+  @ApiProperty({ enum: ReturnRequestType })
+  @IsEnum(ReturnRequestType)
+  type!: ReturnRequestType;
+
+  @ApiProperty({ minLength: 10, maxLength: 2000 })
+  @IsString()
+  @MinLength(10)
+  @MaxLength(2000)
+  reason!: string;
+}
+
+export class ReviewReturnRequestDto {
+  @ApiProperty({ enum: ['approved', 'rejected'] })
+  @IsIn([ReturnRequestStatus.APPROVED, ReturnRequestStatus.REJECTED])
+  status!: ReturnRequestStatus.APPROVED | ReturnRequestStatus.REJECTED;
+
+  @ApiPropertyOptional({ maxLength: 2000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  adminNote?: string;
 }

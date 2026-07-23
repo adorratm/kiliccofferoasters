@@ -8,6 +8,7 @@ import { Cart } from '@entities/cart.entity';
 import { CartItem } from '@entities/cart-item.entity';
 import { Order } from '@entities/order.entity';
 import { OrderItem } from '@entities/order-item.entity';
+import { ReturnRequest } from '@entities/return-request.entity';
 import { Payment } from '@entities/payment.entity';
 import { Shipment } from '@entities/shipment.entity';
 import { ShippingProviderConfig } from '@entities/shipping-provider-config.entity';
@@ -39,6 +40,7 @@ export const ALL_ENTITIES = [
   CartItem,
   Order,
   OrderItem,
+  ReturnRequest,
   Payment,
   Shipment,
   ShippingProviderConfig,

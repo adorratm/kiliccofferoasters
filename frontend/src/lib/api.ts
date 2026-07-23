@@ -17,6 +17,8 @@ import type {
   ProductQuery,
   ProductReview,
   ProductReviewsResponse,
+  ReturnRequest,
+  ReturnRequestType,
   SearchResponse,
   ShippingProvider,
   TrackingResult,
@@ -227,6 +229,19 @@ export async function getCart(sessionId: string, token?: string | null) {
   return apiFetch<Cart>("/cart", { sessionId, token, cache: "no-store" });
 }
 
+export async function setCartGuestEmail(
+  sessionId: string,
+  email: string,
+  token?: string | null,
+) {
+  return apiFetch<Cart>("/cart/guest-email", {
+    method: "PATCH",
+    sessionId,
+    token,
+    json: { email },
+  });
+}
+
 export async function addCartItem(
   sessionId: string,
   payload: {
@@ -276,6 +291,39 @@ export async function login(email: string, password: string) {
     method: "POST",
     json: { email, password },
   });
+}
+
+export async function forgotPassword(email: string) {
+  return apiFetch<{ ok: boolean }>("/auth/forgot-password", {
+    method: "POST",
+    json: { email },
+  });
+}
+
+export async function resetPassword(token: string, password: string) {
+  return apiFetch<{ ok: boolean }>("/auth/reset-password", {
+    method: "POST",
+    json: { token, password },
+  });
+}
+
+export async function changePassword(
+  token: string,
+  payload: { currentPassword?: string; newPassword: string },
+) {
+  return apiFetch<{ ok: boolean; hasPassword?: boolean }>(
+    "/auth/change-password",
+    {
+      method: "POST",
+      token,
+      json: {
+        newPassword: payload.newPassword,
+        ...(payload.currentPassword
+          ? { currentPassword: payload.currentPassword }
+          : {}),
+      },
+    },
+  );
 }
 
 export async function register(payload: {
@@ -472,6 +520,35 @@ export async function getOrderById(
   } catch {
     return null;
   }
+}
+
+export async function getOrderReturnRequests(
+  orderId: string,
+  token: string,
+): Promise<ReturnRequest[]> {
+  try {
+    return await apiFetch<ReturnRequest[]>(
+      `/orders/${encodeURIComponent(orderId)}/return-requests`,
+      { token },
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function createReturnRequest(
+  orderId: string,
+  token: string,
+  payload: { type: ReturnRequestType; reason: string },
+): Promise<ReturnRequest> {
+  return apiFetch<ReturnRequest>(
+    `/orders/${encodeURIComponent(orderId)}/return-requests`,
+    {
+      method: "POST",
+      token,
+      json: payload,
+    },
+  );
 }
 
 export async function trackShipment(code: string): Promise<TrackingResult | null> {

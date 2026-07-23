@@ -21,6 +21,7 @@ import {
   buildAbandonedCartEmail,
   buildEmailContent,
   buildLowStockEmail,
+  buildPasswordResetEmail,
   buildWhatsAppBody,
   resolveFrontendUrl,
   statusLabel,
@@ -92,16 +93,20 @@ export class NotificationsService {
     email: string;
     name?: string | null;
     itemCount: number;
+    reminder?: 1 | 2;
   }) {
+    const reminder = input.reminder === 2 ? 2 : 1;
+    const template =
+      reminder === 2 ? 'abandoned_cart_2' : 'abandoned_cart';
     const payload: NotificationJobPayload = {
       cartId: input.cartId,
-      template: 'abandoned_cart',
+      template,
       channels: ['email'],
       recipientEmail: input.email,
       recipientName: input.name || undefined,
-      context: { itemCount: input.itemCount },
+      context: { itemCount: input.itemCount, reminder },
     };
-    await this.notifyQueue.add('abandoned_cart', payload, {
+    await this.notifyQueue.add(template, payload, {
       attempts: 2,
       backoff: { type: 'exponential', delay: 5000 },
       removeOnComplete: 50,
@@ -136,8 +141,30 @@ export class NotificationsService {
     }
   }
 
+  /** Şifre sıfırlama — kuyruk beklemeden doğrudan gönderilir */
+  async sendPasswordResetEmail(input: {
+    email: string;
+    name?: string | null;
+    resetUrl: string;
+  }): Promise<void> {
+    const name = input.name?.trim() || 'Merhaba';
+    const content = buildPasswordResetEmail({
+      name,
+      resetUrl: input.resetUrl,
+    });
+    await this.email.send({
+      to: input.email,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+    });
+  }
+
   async processJob(payload: NotificationJobPayload): Promise<void> {
-    if (payload.template === 'abandoned_cart') {
+    if (
+      payload.template === 'abandoned_cart' ||
+      payload.template === 'abandoned_cart_2'
+    ) {
       await this.processAbandonedCart(payload);
       return;
     }
@@ -297,7 +324,7 @@ export class NotificationsService {
     const log = this.em.create(NotificationLog, {
       channel: NotificationChannel.EMAIL,
       recipient: email,
-      template: 'abandoned_cart',
+      template: payload.template || 'abandoned_cart',
       orderId: null,
       shipmentId: null,
       status: NotificationStatus.PENDING,
@@ -306,7 +333,17 @@ export class NotificationsService {
     await this.em.save(log);
 
     try {
-      const content = buildAbandonedCartEmail({ name, itemCount, cartUrl });
+      const reminder =
+        payload.template === 'abandoned_cart_2' ||
+        payload.context?.reminder === 2
+          ? 2
+          : 1;
+      const content = buildAbandonedCartEmail({
+        name,
+        itemCount,
+        cartUrl,
+        reminder,
+      });
       const result = await this.email.send({
         to: email,
         subject: content.subject,

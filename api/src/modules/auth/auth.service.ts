@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -9,18 +10,44 @@ import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+import { createHash, randomBytes } from 'crypto';
 import {
   User,
   AuthProvider,
   UserRole,
 } from '@entities/user.entity';
 import { AdminAllowlist } from '@entities/admin-allowlist.entity';
-import { LoginDto, RegisterDto } from '@modules/auth/dto/auth.dto';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+  ChangePasswordDto,
+} from '@modules/auth/dto/auth.dto';
+import { NotificationsService } from '@modules/notifications/notifications.service';
+import { resolveFrontendUrl } from '@modules/notifications/notification.templates';
 
 export interface AuthTokens {
   accessToken: string;
-  user: Omit<User, 'passwordHash'>;
+  user: PublicUser;
 }
+
+export type PublicUser = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  provider: AuthProvider;
+  providerId: string | null;
+  role: UserRole;
+  avatarUrl: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  hasPassword: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export interface OAuthProfileInput {
   email: string;
@@ -34,10 +61,13 @@ export interface OAuthProfileInput {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectEntityManager() private readonly em: EntityManager,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthTokens> {
@@ -78,7 +108,108 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  async me(userId: string): Promise<Omit<User, 'passwordHash'>> {
+  /**
+   * Her zaman aynı yanıt — e-posta numaralandırmayı engeller.
+   * Yerel şifresi olmayan (yalnızca OAuth) hesaplara mail gönderilmez.
+   */
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ ok: true }> {
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.em.findOne(User, { where: { email } });
+
+    if (user?.isActive && user.passwordHash) {
+      const token = randomBytes(32).toString('hex');
+      user.passwordResetTokenHash = this.hashToken(token);
+      user.passwordResetExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      await this.em.save(user);
+
+      const frontendUrl = resolveFrontendUrl(this.config);
+      const resetUrl = `${frontendUrl}/sifre-sifirla?token=${encodeURIComponent(token)}`;
+      const name = [user.firstName, user.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+      try {
+        await this.notifications.sendPasswordResetEmail({
+          email: user.email,
+          name: name || null,
+          resetUrl,
+        });
+      } catch (err) {
+        this.logger.warn(
+          `Password reset email failed for ${email}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
+
+    return { ok: true };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ ok: true }> {
+    const tokenHash = this.hashToken(dto.token.trim());
+    const user = await this.em.findOne(User, {
+      where: { passwordResetTokenHash: tokenHash },
+    });
+
+    if (
+      !user ||
+      !user.passwordResetExpiresAt ||
+      user.passwordResetExpiresAt.getTime() < Date.now()
+    ) {
+      throw new UnauthorizedException(
+        'Sıfırlama bağlantısı geçersiz veya süresi dolmuş',
+      );
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Hesap pasif');
+    }
+
+    user.passwordHash = await bcrypt.hash(dto.password, 12);
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpiresAt = null;
+    user.provider = AuthProvider.LOCAL;
+    await this.em.save(user);
+    return { ok: true };
+  }
+
+  /**
+   * Yerel şifre varsa mevcut şifre doğrulanır.
+   * Yalnızca Google ile kayıtlıysa (passwordHash yok) JWT yeterli — ilk şifre belirlenir.
+   */
+  async changePassword(
+    userId: string,
+    dto: ChangePasswordDto,
+  ): Promise<{ ok: true; hasPassword: true }> {
+    const user = await this.em.findOne(User, {
+      where: { id: userId, isActive: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Kullanıcı bulunamadı');
+    }
+
+    if (user.passwordHash) {
+      if (!dto.currentPassword) {
+        throw new UnauthorizedException('Mevcut şifre gerekli');
+      }
+      const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+      if (!ok) {
+        throw new UnauthorizedException('Mevcut şifre hatalı');
+      }
+    }
+
+    user.passwordHash = await bcrypt.hash(dto.newPassword, 12);
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpiresAt = null;
+    // Google bağlı kalsın; e-posta/şifre + Google birlikte kullanılabilir
+    user.provider = AuthProvider.LOCAL;
+    await this.em.save(user);
+    return { ok: true, hasPassword: true };
+  }
+
+  async me(userId: string): Promise<PublicUser> {
     const user = await this.em.findOne(User, {
       where: { id: userId, isActive: true },
     });
@@ -146,11 +277,9 @@ export class AuthService {
       throw new UnauthorizedException('Hesap pasif');
     }
 
-    // Mevcut hesaba Google’ı bağla — şifreyi silme
     user.providerId = input.providerId;
     user.emailVerified = true;
     if (user.passwordHash) {
-      // Yerel kayıt kalır; şifre + Google birlikte kullanılabilir
       user.provider = AuthProvider.LOCAL;
     } else {
       user.provider = input.provider;
@@ -176,10 +305,27 @@ export class AuthService {
     return { accessToken, user: this.sanitize(user) };
   }
 
-  private sanitize(user: User): Omit<User, 'passwordHash'> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash: _, ...rest } = user;
-    return rest;
+  private sanitize(user: User): PublicUser {
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      provider: user.provider,
+      providerId: user.providerId,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      hasPassword: Boolean(user.passwordHash),
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
   }
 
   async isAdminEmail(email: string): Promise<boolean> {

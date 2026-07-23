@@ -292,7 +292,22 @@ export class CartService {
 
   /** Abandoned cart cron için güncel aktivite zamanı */
   private async touchCart(cart: Cart) {
-    await this.em.update(Cart, cart.id, { abandonedReminderAt: null });
+    await this.em.update(Cart, cart.id, {
+      abandonedReminderAt: null,
+      abandonedReminder2At: null,
+    });
+  }
+
+  async setGuestEmail(
+    email: string,
+    userId?: string | null,
+    sessionId?: string | null,
+  ) {
+    const cart = await this.getOrCreateCart(userId, sessionId);
+    const normalized = email.toLowerCase().trim();
+    cart.guestEmail = normalized;
+    await this.em.save(cart);
+    return this.getCart(userId, sessionId);
   }
 
   private withTotals(cart: Cart) {

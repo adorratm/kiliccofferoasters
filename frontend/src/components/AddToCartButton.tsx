@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
+import { trackAddToCart } from "@/lib/analytics";
 import { cartAddItem } from "@/lib/cart";
 
 type Props = {
@@ -12,6 +13,8 @@ type Props = {
   label?: string;
   className?: string;
   disabled?: boolean;
+  productName?: string;
+  price?: number;
 };
 
 export function AddToCartButton({
@@ -21,6 +24,8 @@ export function AddToCartButton({
   label = "Satın Almayı Başlat",
   className,
   disabled = false,
+  productName,
+  price,
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -37,6 +42,12 @@ export function AddToCartButton({
         productId,
         variantId,
         grindOption,
+        quantity: 1,
+      });
+      trackAddToCart({
+        id: productId,
+        name: productName,
+        price,
         quantity: 1,
       });
       router.push("/sepet");

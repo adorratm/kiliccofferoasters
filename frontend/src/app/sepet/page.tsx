@@ -10,7 +10,10 @@ import {
   cartSubtotal,
   cartUpdateQuantity,
   fetchCart,
+  getCartSessionId,
 } from "@/lib/cart";
+import { setCartGuestEmail } from "@/lib/api";
+import { getToken, isAuthenticated } from "@/lib/auth";
 import { formatMoney, productImage } from "@/lib/format";
 import { grindLabel } from "@/lib/grind";
 import type { Cart } from "@/lib/types";
@@ -20,6 +23,10 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [guestEmail, setGuestEmail] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailMsg, setEmailMsg] = useState<string | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
 
   async function reload() {
     setLoading(true);
@@ -27,6 +34,7 @@ export default function CartPage() {
     try {
       const data = await fetchCart();
       setCart(data);
+      if (data?.guestEmail) setGuestEmail(data.guestEmail);
     } catch {
       setCart(null);
       setError("Sepet yüklenemedi. Bağlantıyı kontrol edip yeniden deneyin.");
@@ -36,8 +44,29 @@ export default function CartPage() {
   }
 
   useEffect(() => {
+    setLoggedIn(isAuthenticated());
     reload();
   }, []);
+
+  async function saveGuestEmail() {
+    const email = guestEmail.trim();
+    if (!email) return;
+    setEmailSaving(true);
+    setEmailMsg(null);
+    try {
+      const next = await setCartGuestEmail(
+        getCartSessionId(),
+        email,
+        getToken(),
+      );
+      setCart(next);
+      setEmailMsg("E-posta kaydedildi. Sepet hatırlatması için kullanılabilir.");
+    } catch {
+      setEmailMsg("E-posta kaydedilemedi.");
+    } finally {
+      setEmailSaving(false);
+    }
+  }
 
   async function changeQty(itemId: string, quantity: number) {
     if (quantity < 1) return;
@@ -194,6 +223,33 @@ export default function CartPage() {
                     <span className="text-primary">{formatMoney(subtotal)}</span>
                   </div>
                 </div>
+                {!loggedIn ? (
+                  <div className="mt-4 space-y-2">
+                    <label className="field-label">
+                      E-posta (opsiyonel hatırlatma)
+                    </label>
+                    <input
+                      type="email"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      placeholder="ornek@email.com"
+                      className="field-input"
+                    />
+                    <button
+                      type="button"
+                      disabled={emailSaving || !guestEmail.trim()}
+                      onClick={() => void saveGuestEmail()}
+                      className="btn-ghost w-full py-3 text-[10px] disabled:opacity-50"
+                    >
+                      {emailSaving ? "Kaydediliyor…" : "E-postayı kaydet"}
+                    </button>
+                    {emailMsg ? (
+                      <p className="font-meta text-[10px] uppercase text-secondary">
+                        {emailMsg}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 <Link
                   href="/odeme"
                   className="btn-cta mt-6 block w-full py-4 text-center text-xs"

@@ -115,6 +115,7 @@ export type Cart = {
   id: string;
   userId: string | null;
   sessionId: string | null;
+  guestEmail?: string | null;
   items: CartItem[];
   subtotal?: string;
   currency?: string;
@@ -128,6 +129,8 @@ export type User = {
   phone: string | null;
   role: string;
   avatarUrl: string | null;
+  provider?: string;
+  hasPassword?: boolean;
 };
 
 export type AuthResponse = {
@@ -175,7 +178,27 @@ export type Order = {
   shippingProvider: string | null;
   items: OrderItem[];
   createdAt?: string;
+  updatedAt?: string;
   shipments?: Shipment[];
+};
+
+export type ReturnRequestType = "cancel" | "return";
+export type ReturnRequestStatus =
+  | "requested"
+  | "approved"
+  | "rejected"
+  | "completed";
+
+export type ReturnRequest = {
+  id: string;
+  orderId: string;
+  type: ReturnRequestType;
+  status: ReturnRequestStatus;
+  reason: string;
+  adminNote?: string | null;
+  reviewedAt?: string | null;
+  createdAt?: string;
+  order?: Pick<Order, "id" | "orderNumber" | "status" | "customerName" | "total">;
 };
 
 export type Address = {

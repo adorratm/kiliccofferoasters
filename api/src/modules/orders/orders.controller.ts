@@ -18,8 +18,10 @@ import {
 import { OrdersService } from '@modules/orders/orders.service';
 import {
   CreateOrderDto,
+  CreateReturnRequestDto,
   GuestOrderLookupDto,
   OrderQueryDto,
+  ReviewReturnRequestDto,
   UpdateOrderStatusDto,
 } from '@modules/orders/dto/orders.dto';
 import { Public } from '@common/decorators/public.decorator';
@@ -76,11 +78,56 @@ export class OrdersController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Get('admin/return-requests')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: iade/iptal talepleri' })
+  listReturnRequests(@Query('status') status?: string) {
+    return this.ordersService.listReturnRequestsAdmin(status);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Patch('admin/return-requests/:requestId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: iade/iptal talebini onayla veya reddet' })
+  reviewReturnRequest(
+    @Param('requestId') requestId: string,
+    @Body() dto: ReviewReturnRequestDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.ordersService.reviewReturnRequest(requestId, user.id, dto);
+  }
+
+  @Roles(UserRole.ADMIN)
   @Patch(':id/status')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin: sipariş durumu güncelle' })
   updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
     return this.ordersService.updateStatus(id, dto);
+  }
+
+  @Post(':id/return-requests')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'İptal veya iade talebi oluştur' })
+  createReturnRequest(
+    @Param('id') id: string,
+    @Body() dto: CreateReturnRequestDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.ordersService.createReturnRequest(id, user.id, dto);
+  }
+
+  @Get(':id/return-requests')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Sipariş iade/iptal talepleri' })
+  listOrderReturnRequests(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.ordersService.listReturnRequestsForOrder(
+      id,
+      user.id,
+      user.role === UserRole.ADMIN,
+    );
   }
 
   @Get(':id')
