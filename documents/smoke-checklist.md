@@ -26,6 +26,9 @@ Canlı veya staging öncesi hızlı sağlık kontrolü. Her madde için beklenen
 - [ ] Müşteri Google OAuth (frontend) → sepet/session korunuyor
 - [ ] Admin Google OAuth → allowlist dışı hesap `/login?error=...` ile dönüyor
 - [ ] Admin allowlist hesap paneli açıyor
+- [ ] `/sifremi-unuttum` → mail (SMTP yoksa konsol) + `/sifre-sifirla?token=` ile yeni şifre
+- [ ] Google-only hesap: Hesabım → **Şifre belirle** (mevcut şifre istemeden)
+- [ ] Yerel şifreli hesap: Hesabım → **Şifre değiştir** (mevcut şifre zorunlu)
 
 ---
 
@@ -35,23 +38,27 @@ Canlı veya staging öncesi hızlı sağlık kontrolü. Her madde için beklenen
 - [ ] Header arama (`Ctrl+K`) ürün veya blog sonucu veriyor
 - [ ] Anlamsız arama → “bulunamadı” + öneri ürünler (demo ürün basılmıyor)
 - [ ] Ürün detayda varyant / stok seçimi görünüyor
+- [ ] Aktif kampanya varsa satış fiyatı + üstü çizili eski fiyat görünüyor
 
 ---
 
 ## 3. Sepet & checkout
 
 - [ ] Ürün sepete ekleniyor; yenilemede sepet kalıyor
+- [ ] Misafir sepetinde e-posta kaydı → terk edilen sepet maili için kullanılır
 - [ ] Yetersiz stokta checkout engelleniyor (anlamlı hata)
 - [ ] Sipariş oluşturuluyor (`pending_payment`); sepet henüz silinmiyor
-- [ ] iyzico sandbox ödeme success → sipariş `paid`, sepet temizleniyor, stok düşüyor
+- [ ] PayTR / iyzico ödeme success → sipariş `paid`, sepet temizleniyor, stok düşüyor
 - [ ] Ödeme başarısız / vazgeç → sepet duruyor, stok düşmüyor
 - [ ] Giriş sonrası session sepeti kullanıcı sepetine birleşiyor
+- [ ] Terk edilen sepet: 1. hatırlatma (`ABANDONED_CART_HOURS`) + 2. hatırlatma (`ABANDONED_CART_SECOND_HOURS`)
 
 ---
 
 ## 4. Sipariş & kargo (müşteri)
 
 - [ ] Hesap siparişleri / sipariş detay açılıyor
+- [ ] Sipariş detaydan iptal (kargo öncesi) veya iade/cayma talebi açılıyor
 - [ ] Misafir: `/siparis-sorgula` + e-posta + sipariş no ile kayıt bulunuyor
 - [ ] Admin’den kargo tracking girilince müşteri timeline’da görünüyor
 
@@ -62,9 +69,21 @@ Canlı veya staging öncesi hızlı sağlık kontrolü. Her madde için beklenen
 - [ ] Dashboard bugünkü ciro / özet tutuluyor (boş fallback çökmesin)
 - [ ] Global arama (`Ctrl+K`) → ürün / sipariş / mesaj deep-link
 - [ ] Sipariş listesi: kaynak sütunu, `?q=` filtre, detay adres/ödeme okunaklı
+- [ ] **İade Talepleri** (`/iadeler`): onay/red; kısmi iade tutarı; PayTR iade (keys varsa)
 - [ ] Ürün kaydı: kategori atanabiliyor
+- [ ] **Kampanyalar** (`/kampanyalar`): % indirim + ürün ID / tüm katalog
 - [ ] Durum `cancelled` veya `refunded` → stok geri geliyor (`stock_decremented` false)
 - [ ] Blog oluştur / yayınla → mağazada `/blog/[slug]` görünür
+- [ ] Prod’da credentials yokken kargo oluştur → hata (`SHIPPING_ALLOW_MOCK` kapalı)
+
+---
+
+## 5b. Çerez & analitik
+
+- [ ] Banner: yalnızca gerekli / özelleştir / tümünü kabul
+- [ ] Analytics onayı sonrası GA4 veya GTM yüklenir
+- [ ] Marketing onayı sonrası Meta Pixel yüklenir
+- [ ] Ürün detay → ViewContent; sepete ekle → AddToCart; ödeme → BeginCheckout; başarı → Purchase (girişliyse tutar dolu)
 
 ---
 

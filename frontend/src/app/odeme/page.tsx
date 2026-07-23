@@ -18,6 +18,7 @@ import {
 } from "@/lib/cart";
 import { formatMoney } from "@/lib/format";
 import { calculateOrderTotals } from "@/lib/pricing";
+import { trackBeginCheckout } from "@/lib/analytics";
 import type {
   Address,
   Cart,
@@ -86,6 +87,15 @@ export default function CheckoutPage() {
       setProviders(providerData);
       setAddresses(addressData);
       setUser(me);
+
+      if (cartData?.items?.length) {
+        const subtotal = cartSubtotal(cartData);
+        trackBeginCheckout({
+          value: subtotal,
+          currency: "TRY",
+          itemCount: cartData.items.reduce((n, i) => n + i.quantity, 0),
+        });
+      }
 
       setForm((f) => {
         const next = { ...f };

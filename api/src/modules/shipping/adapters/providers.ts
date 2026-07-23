@@ -11,6 +11,7 @@ import {
   hasCredentials,
   mockTrackingNumber,
 } from '@modules/shipping/adapters/shipping.adapter';
+import { BadRequestException } from '@nestjs/common';
 
 export abstract class BaseMockShippingAdapter implements IShippingAdapter {
   abstract readonly code: ShippingProviderCode;
@@ -21,6 +22,11 @@ export abstract class BaseMockShippingAdapter implements IShippingAdapter {
     input: CreateShipmentInput,
   ): Promise<CreateShipmentResult> {
     const mock = !hasCredentials(input.credentials);
+    if (mock && input.allowMock === false) {
+      throw new BadRequestException(
+        `${this.code}: kargo API kimlik bilgileri eksik. Prod’da mock kapalı — credentials girin veya SHIPPING_ALLOW_MOCK=true yapın.`,
+      );
+    }
     const trackingNumber = mockTrackingNumber(this.prefix);
     return {
       trackingNumber,

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Reveal } from "@/components/Reveal";
 import { getToken } from "@/lib/auth";
+import { getOrderById } from "@/lib/api";
 import { trackPurchase } from "@/lib/analytics";
 
 function SuccessContent() {
@@ -18,17 +19,37 @@ function SuccessContent() {
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    setLoggedIn(Boolean(getToken()));
+    const token = getToken();
+    setLoggedIn(Boolean(token));
     if (orderNumber) {
       sessionStorage.setItem("kilic_last_order_number", orderNumber);
     }
-    if (orderId) {
-      sessionStorage.setItem("kilic_last_order_id", orderId);
+    if (!orderId) return;
+    sessionStorage.setItem("kilic_last_order_id", orderId);
+
+    let cancelled = false;
+    (async () => {
+      let value: number | undefined;
+      let currency = "TRY";
+      if (token) {
+        const order = await getOrderById(orderId, token);
+        if (order) {
+          value = Number(order.total);
+          currency = order.currency || "TRY";
+        }
+      }
+      if (cancelled) return;
       trackPurchase({
         id: orderId,
         orderNumber,
+        value,
+        currency,
       });
-    }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [orderId, orderNumber]);
 
   return (

@@ -37,6 +37,9 @@ export default function ReturnsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [refundAmounts, setRefundAmounts] = useState<Record<string, string>>(
+    {},
+  );
 
   async function load() {
     setLoading(true);
@@ -66,11 +69,23 @@ export default function ReturnsPage() {
     setBusyId(id);
     setError(null);
     try {
+      const amountRaw = refundAmounts[id]?.trim();
+      const refundAmount =
+        status === 'approved' && amountRaw
+          ? Number(amountRaw)
+          : undefined;
+      if (
+        refundAmount != null &&
+        (!Number.isFinite(refundAmount) || refundAmount <= 0)
+      ) {
+        throw new Error('Geçerli bir iade tutarı girin');
+      }
       await api(`/orders/admin/return-requests/${id}`, {
         method: 'PATCH',
         body: {
           status,
           adminNote: notes[id]?.trim() || undefined,
+          ...(refundAmount != null ? { refundAmount } : {}),
         },
       });
       await load();
@@ -183,6 +198,20 @@ export default function ReturnsPage() {
                     value={notes[r.id] || ''}
                     onChange={(e) =>
                       setNotes((prev) => ({ ...prev, [r.id]: e.target.value }))
+                    }
+                    className="w-full border border-border-muted bg-background px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    min={0.01}
+                    step="0.01"
+                    placeholder={`İade tutarı (boş = tam · ${r.order?.total ?? '—'})`}
+                    value={refundAmounts[r.id] || ''}
+                    onChange={(e) =>
+                      setRefundAmounts((prev) => ({
+                        ...prev,
+                        [r.id]: e.target.value,
+                      }))
                     }
                     className="w-full border border-border-muted bg-background px-3 py-2 text-sm"
                   />

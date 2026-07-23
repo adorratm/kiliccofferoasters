@@ -89,6 +89,7 @@ export class ShippingService {
     });
     const credentials = config?.credentials || {};
     const adapter = this.getAdapter(dto.provider);
+    const allowMock = this.config.get<boolean>('shipping.allowMock') === true;
 
     const result = await adapter.createShipment({
       orderId: order.id,
@@ -97,6 +98,7 @@ export class ShippingService {
       recipientPhone: order.customerPhone,
       address: order.shippingAddress,
       credentials,
+      allowMock,
     });
 
     const shipment = this.em.create(Shipment, {

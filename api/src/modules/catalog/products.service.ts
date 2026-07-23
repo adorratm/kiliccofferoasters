@@ -18,18 +18,24 @@ import {
   PaginatedResult,
 } from '@common/utils/pagination';
 import { LowStockService } from '@modules/catalog/low-stock.service';
+import { CampaignsService } from '@modules/campaigns/campaigns.service';
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectEntityManager() private readonly em: EntityManager,
     private readonly lowStock: LowStockService,
+    private readonly campaigns: CampaignsService,
   ) {}
 
   async findAllPublic(
     query: ProductQueryDto = {},
   ): Promise<PaginatedResult<Product>> {
-    return this.queryProducts({ ...query, includeInactive: false });
+    const result = await this.queryProducts({ ...query, includeInactive: false });
+    result.items = (await this.campaigns.decorateProducts(
+      result.items,
+    )) as Product[];
+    return result;
   }
 
   async findAllAdmin(
@@ -144,7 +150,7 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException('Ürün bulunamadı');
     }
-    return product;
+    return (await this.campaigns.decorateProduct(product)) as Product;
   }
 
   async findById(id: string): Promise<Product> {

@@ -458,16 +458,34 @@ export class OrdersService {
         order.payment.conversationId &&
         order.payment.status === PaymentStatus.SUCCESS
       ) {
+        const paidAmount = Number(order.payment.amount || order.total);
+        let refundNum =
+          dto.refundAmount != null && Number.isFinite(dto.refundAmount)
+            ? Number(dto.refundAmount)
+            : paidAmount;
+        if (refundNum <= 0) {
+          throw new BadRequestException('İade tutarı 0’dan büyük olmalı');
+        }
+        if (refundNum > paidAmount) {
+          refundNum = paidAmount;
+        }
+        const refundAmountStr = refundNum.toFixed(2);
+        saved.refundAmount = refundAmountStr;
+        saved = await this.em.save(saved);
+
         try {
           const refundResult = await this.paytr.refund({
             merchantOid: order.payment.conversationId,
-            returnAmount: order.payment.amount || order.total,
+            returnAmount: refundAmountStr,
             referenceNo: `RR-${request.id.slice(0, 8)}`,
           });
-          order.payment.status = PaymentStatus.REFUNDED;
+          if (refundNum >= paidAmount - 0.009) {
+            order.payment.status = PaymentStatus.REFUNDED;
+          }
           order.payment.rawResponse = {
             ...(order.payment.rawResponse || {}),
             refund: refundResult,
+            refundAmount: refundAmountStr,
           };
           await this.em.save(order.payment);
         } catch (err) {
@@ -482,6 +500,12 @@ export class OrdersService {
               : 'Ödeme iadesi başarısız',
           );
         }
+      } else if (
+        dto.refundAmount != null &&
+        Number.isFinite(dto.refundAmount)
+      ) {
+        saved.refundAmount = Number(dto.refundAmount).toFixed(2);
+        saved = await this.em.save(saved);
       }
 
       order.status = targetStatus;

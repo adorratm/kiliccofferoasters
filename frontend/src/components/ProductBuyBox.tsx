@@ -25,14 +25,23 @@ export function ProductBuyBox({ product, demoMode = false }: Props) {
 
   const selected: ProductVariant | undefined =
     variants.find((v) => v.id === variantId) || variants[0];
-  const price = selected?.price ?? product.basePrice;
-  const stock =
-    selected != null ? selected.stock : product.stock;
+  const displayPrice =
+    selected?.price ?? product.salePrice ?? product.basePrice;
+  const compareAt =
+    (selected as ProductVariant & { compareAtPrice?: string })
+      ?.compareAtPrice ?? product.compareAtPrice;
+  const stock = selected != null ? selected.stock : product.stock;
   const outOfStock = stock <= 0;
   const disabled = demoMode || outOfStock;
 
   return (
     <div className="space-y-6">
+      {product.campaignName ? (
+        <p className="font-meta text-[10px] uppercase tracking-widest text-primary">
+          Kampanya · {product.campaignName}
+        </p>
+      ) : null}
+
       {variants.length > 0 ? (
         <div>
           <p className="mb-2 font-meta text-[10px] uppercase tracking-widest text-on-surface-variant">
@@ -91,9 +100,16 @@ export function ProductBuyBox({ product, demoMode = false }: Props) {
           <p className="font-meta text-[10px] uppercase text-on-surface-variant">
             Fiyat
           </p>
-          <p className="font-display text-3xl">
-            {formatMoney(price, product.currency)}
-          </p>
+          <div className="flex flex-wrap items-baseline gap-3">
+            <p className="font-display text-3xl text-primary">
+              {formatMoney(displayPrice, product.currency)}
+            </p>
+            {compareAt && Number(compareAt) > Number(displayPrice) ? (
+              <p className="font-meta text-sm uppercase text-secondary line-through">
+                {formatMoney(compareAt, product.currency)}
+              </p>
+            ) : null}
+          </div>
           <p className="mt-1 font-meta text-[10px] uppercase text-secondary">
             Stok {outOfStock ? "yok" : `[${stock}]`}
           </p>
@@ -119,11 +135,7 @@ export function ProductBuyBox({ product, demoMode = false }: Props) {
             grindOption={grind}
             disabled={disabled}
             productName={product.name}
-            price={
-              selected
-                ? Number(selected.price)
-                : Number(product.basePrice)
-            }
+            price={Number(displayPrice)}
             label={
               demoMode
                 ? "Demo mod"

@@ -102,6 +102,14 @@ export default () => ({
   shipping: {
     freeOver: parseFloat(process.env.FREE_SHIPPING_OVER || '0'),
     defaultFee: parseFloat(process.env.DEFAULT_SHIPPING_FEE || '89.90'),
+    /**
+     * Credentials yokken mock kargo oluşturulsun mu?
+     * production’da yalnızca SHIPPING_ALLOW_MOCK=true ile açılır.
+     */
+    allowMock:
+      process.env.NODE_ENV === 'production'
+        ? process.env.SHIPPING_ALLOW_MOCK === 'true'
+        : process.env.SHIPPING_ALLOW_MOCK !== 'false',
   },
   abandonedCart: {
     /** Sepet güncellenmeden kaç saat sonra 1. hatırlatma (varsayılan 4) */

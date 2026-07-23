@@ -9,11 +9,13 @@ import { LowStockScheduler } from '@modules/catalog/low-stock.scheduler';
 import { CategoriesController } from '@modules/catalog/categories.controller';
 import { ProductsController } from '@modules/catalog/products.controller';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
+import { CampaignsModule } from '@modules/campaigns/campaigns.module';
 import { QUEUE_LOW_STOCK } from '@modules/queues/queue.constants';
 
 @Module({
   imports: [
     NotificationsModule,
+    CampaignsModule,
     BullModule.registerQueue({ name: QUEUE_LOW_STOCK }),
   ],
   controllers: [CategoriesController, ProductsController],

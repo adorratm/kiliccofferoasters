@@ -7,10 +7,12 @@ import { AbandonedCartProcessor } from '@modules/cart/abandoned-cart.processor';
 import { AbandonedCartScheduler } from '@modules/cart/abandoned-cart.scheduler';
 import { QUEUE_ABANDONED_CART } from '@modules/queues/queue.constants';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
+import { CampaignsModule } from '@modules/campaigns/campaigns.module';
 
 @Module({
   imports: [
     NotificationsModule,
+    CampaignsModule,
     BullModule.registerQueue({ name: QUEUE_ABANDONED_CART }),
   ],
   controllers: [CartController],

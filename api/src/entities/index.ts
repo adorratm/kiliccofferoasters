@@ -39,3 +39,4 @@ export {
   NotificationChannel,
   NotificationStatus,
 } from '@entities/notification-log.entity';
+export { Campaign } from '@entities/campaign.entity';

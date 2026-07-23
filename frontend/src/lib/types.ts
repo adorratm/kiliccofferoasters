@@ -28,6 +28,10 @@ export type Product = {
   gallery: string[];
   badge: string | null;
   basePrice: string;
+  /** Kampanya sonrası fiyat (varsa) */
+  salePrice?: string | null;
+  compareAtPrice?: string | null;
+  campaignName?: string | null;
   currency: string;
   stock: number;
   isActive: boolean;

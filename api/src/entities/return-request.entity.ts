@@ -54,6 +54,16 @@ export class ReturnRequest extends BaseEntity {
   @Column({ name: 'admin_note', type: 'text', nullable: true })
   adminNote!: string | null;
 
+  /** Onaylanan iade tutarı (TRY) */
+  @Column({
+    name: 'refund_amount',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
+  refundAmount!: string | null;
+
   @Column({ name: 'reviewed_at', type: 'timestamptz', nullable: true })
   reviewedAt!: Date | null;
 

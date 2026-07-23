@@ -28,6 +28,7 @@ import { Coupon } from '@entities/coupon.entity';
 import { CouponRedemption } from '@entities/coupon-redemption.entity';
 import { ProductReview } from '@entities/product-review.entity';
 import { WishlistItem } from '@entities/wishlist-item.entity';
+import { Campaign } from '@entities/campaign.entity';
 
 export const ALL_ENTITIES = [
   User,
@@ -60,4 +61,5 @@ export const ALL_ENTITIES = [
   CouponRedemption,
   ProductReview,
   WishlistItem,
+  Campaign,
 ];

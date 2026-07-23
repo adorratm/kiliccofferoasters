@@ -67,6 +67,91 @@ export function trackAddToCart(item: {
   }
 }
 
+export function trackViewContent(item: {
+  id: string;
+  name?: string;
+  price?: number;
+  currency?: string;
+}) {
+  if (typeof window === "undefined") return;
+  const value = item.price ?? 0;
+
+  if (typeof window.gtag === "function") {
+    window.gtag("event", "view_item", {
+      currency: item.currency || "TRY",
+      value,
+      items: [
+        {
+          item_id: item.id,
+          item_name: item.name,
+          price: item.price,
+        },
+      ],
+    });
+  }
+
+  pushDataLayer({
+    event: "view_item",
+    ecommerce: {
+      currency: item.currency || "TRY",
+      value,
+      items: [
+        {
+          item_id: item.id,
+          item_name: item.name,
+          price: item.price,
+        },
+      ],
+    },
+  });
+
+  if (typeof window.fbq === "function") {
+    window.fbq("track", "ViewContent", {
+      content_ids: [item.id],
+      content_name: item.name,
+      content_type: "product",
+      value,
+      currency: item.currency || "TRY",
+    });
+  }
+}
+
+export function trackBeginCheckout(input: {
+  value?: number;
+  currency?: string;
+  itemCount?: number;
+}) {
+  if (typeof window === "undefined") return;
+  const value = input.value ?? 0;
+
+  if (typeof window.gtag === "function") {
+    window.gtag("event", "begin_checkout", {
+      currency: input.currency || "TRY",
+      value,
+      items: input.itemCount
+        ? [{ quantity: input.itemCount }]
+        : undefined,
+    });
+  }
+
+  pushDataLayer({
+    event: "begin_checkout",
+    ecommerce: {
+      currency: input.currency || "TRY",
+      value,
+      item_count: input.itemCount,
+    },
+  });
+
+  if (typeof window.fbq === "function") {
+    window.fbq("track", "InitiateCheckout", {
+      value,
+      currency: input.currency || "TRY",
+      num_items: input.itemCount,
+    });
+  }
+}
+
 export function trackPurchase(order: {
   id: string;
   orderNumber?: string | null;

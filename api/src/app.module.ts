@@ -28,6 +28,7 @@ import { SearchModule } from '@modules/search/search.module';
 import { BlogModule } from '@modules/blog/blog.module';
 import { AdminModule } from '@modules/admin/admin.module';
 import { CouponsModule } from '@modules/coupons/coupons.module';
+import { CampaignsModule } from '@modules/campaigns/campaigns.module';
 import { ReviewsModule } from '@modules/reviews/reviews.module';
 import { WishlistModule } from '@modules/wishlist/wishlist.module';
 
@@ -36,6 +37,7 @@ import { WishlistModule } from '@modules/wishlist/wishlist.module';
     HealthModule,
     AdminModule,
     CouponsModule,
+    CampaignsModule,
     ReviewsModule,
     WishlistModule,
     ConfigModule.forRoot({

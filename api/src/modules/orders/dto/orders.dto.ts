@@ -6,6 +6,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsNumber,
   Max,
   MaxLength,
   Min,
@@ -172,4 +173,16 @@ export class ReviewReturnRequestDto {
   @IsString()
   @MaxLength(2000)
   adminNote?: string;
+
+  /** Kısmi iade tutarı (TRY). Boşsa sipariş toplamı */
+  @ApiPropertyOptional({ example: 199.9 })
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === '' || value === null || value === undefined
+      ? undefined
+      : Number(value),
+  )
+  @IsNumber()
+  @Min(0.01)
+  refundAmount?: number;
 }

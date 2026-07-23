@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { FlavorGeometry } from "@/components/FlavorGeometry";
 import { ProductBuyBox } from "@/components/ProductBuyBox";
 import { ProductReviews } from "@/components/ProductReviews";
+import { ProductViewTracker } from "@/components/ProductViewTracker";
 import { Reveal } from "@/components/Reveal";
 import { getProductBySlug } from "@/lib/api";
 import { getSiteSettings } from "@/lib/cms";
@@ -89,6 +90,14 @@ export default async function ProductDetailPage({ params }: Props) {
 
   return (
     <div>
+      <ProductViewTracker
+        id={product.id}
+        name={product.name}
+        price={Number(
+          product.salePrice ?? product.basePrice ?? 0,
+        )}
+        currency={product.currency || "TRY"}
+      />
       <JsonLd data={productJsonLd(product, settings)} />
       <JsonLd
         data={breadcrumbJsonLd([

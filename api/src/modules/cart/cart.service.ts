@@ -13,6 +13,7 @@ import {
   AddCartItemDto,
   UpdateCartItemDto,
 } from '@modules/cart/dto/cart.dto';
+import { CampaignsService } from '@modules/campaigns/campaigns.service';
 
 const CART_RELATIONS = {
   items: { product: true, variant: true },
@@ -20,7 +21,10 @@ const CART_RELATIONS = {
 
 @Injectable()
 export class CartService {
-  constructor(@InjectEntityManager() private readonly em: EntityManager) {}
+  constructor(
+    @InjectEntityManager() private readonly em: EntityManager,
+    private readonly campaigns: CampaignsService,
+  ) {}
 
   async getOrCreateCart(
     userId?: string | null,
@@ -182,6 +186,14 @@ export class CartService {
       unitPrice = variant.price;
       variantId = variant.id;
       availableStock = variant.stock;
+    }
+
+    const campaignPrice = await this.campaigns.priceForProduct(
+      product.id,
+      unitPrice,
+    );
+    if (campaignPrice) {
+      unitPrice = campaignPrice.salePrice;
     }
 
     const grindOption = dto.grindOption ?? 'whole_bean';

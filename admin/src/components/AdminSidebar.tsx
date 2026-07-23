@@ -16,6 +16,7 @@ export const ADMIN_NAV = [
   { href: '/siparisler', label: 'Siparişler', code: '08' },
   { href: '/iadeler', label: 'İade Talepleri', code: '08b' },
   { href: '/kuponlar', label: 'Kuponlar', code: '09' },
+  { href: '/kampanyalar', label: 'Kampanyalar', code: '09b' },
   { href: '/yorumlar', label: 'Yorumlar', code: '10' },
   { href: '/kargo', label: 'Kargo', code: '11' },
   { href: '/pazaryeri', label: 'Pazaryeri', code: '12' },

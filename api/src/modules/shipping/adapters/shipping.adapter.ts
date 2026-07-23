@@ -11,6 +11,8 @@ export interface CreateShipmentInput {
   address: Record<string, string>;
   weightKg?: number;
   credentials: Record<string, string>;
+  /** false ise credentials yokken mock oluşturma */
+  allowMock?: boolean;
 }
 
 export interface CreateShipmentResult {
