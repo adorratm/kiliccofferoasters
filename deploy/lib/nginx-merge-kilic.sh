@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Kılıç Coffee nginx: ayrı conf.d dosyası (default.conf'a merge YOK)
+# nginx -t başarısız olursa conf GERİ ALINIR — diğer siteleri düşürmez
 set -euo pipefail
 
 KILIC_CONF_D_BASENAME="${KILIC_CONF_D_BASENAME:-kiliccoffee.conf}"
@@ -41,20 +42,18 @@ wait_for_nginx_running() {
   return 1
 }
 
-recover_nginx_from_restart_loop() {
-  local container="${1:?nginx container adı gerekli}"
+remove_kilic_conf() {
+  local container="${1:?}"
   local tpl_host="${2:-}"
 
-  echo "==> Nginx restart döngüsü — config host üzerinden yazılıyor..."
-  docker stop "${container}" >/dev/null 2>&1 || true
-
+  echo "  → kiliccoffee conf kaldırılıyor (rollback)..."
+  docker exec "${container}" rm -f \
+    "/etc/nginx/conf.d/${KILIC_CONF_D_BASENAME}" \
+    /etc/nginx/templates/kiliccoffee.conf 2>/dev/null || true
   if [[ -n "${tpl_host}" && -f "${tpl_host}" ]]; then
-    docker cp "${tpl_host}" "${container}:/etc/nginx/conf.d/${KILIC_CONF_D_BASENAME}"
-    echo "  + docker cp → conf.d/${KILIC_CONF_D_BASENAME}"
+    rm -f "${tpl_host}"
   fi
-
-  docker start "${container}" >/dev/null
-  wait_for_nginx_running "${container}" 90
+  rm -f /opt/ttengamesstudio/docker/nginx/templates/kiliccoffee.conf 2>/dev/null || true
 }
 
 docker_exec_retry() {
@@ -75,28 +74,16 @@ install_kilic_conf_d() {
   local container="${1:?nginx container adı gerekli}"
   local tpl_host="${2:-}"
 
-  if wait_for_nginx_running "${container}" 20; then
-    if docker_exec_retry "${container}" sh -c "
-      set -e
-      tpl=/etc/nginx/templates/kiliccoffee.conf
-      dest=/etc/nginx/conf.d/${KILIC_CONF_D_BASENAME}
-      if [ ! -f \"\$tpl\" ]; then
-        echo 'kiliccoffee.conf template yok' >&2
-        exit 1
-      fi
-      cp \"\$tpl\" \"\$dest\"
-    "; then
-      return 0
-    fi
+  if [[ -z "${tpl_host}" || ! -f "${tpl_host}" ]]; then
+    echo "kiliccoffee template host dosyası yok" >&2
+    return 1
   fi
 
-  if [[ -n "${tpl_host}" && -f "${tpl_host}" ]]; then
-    recover_nginx_from_restart_loop "${container}" "${tpl_host}"
-    return 0
-  fi
-
-  echo "kiliccoffee.conf yüklenemedi" >&2
-  return 1
+  # Önce container'a kopyala
+  docker cp "${tpl_host}" "${container}:/etc/nginx/templates/kiliccoffee.conf"
+  docker cp "${tpl_host}" "${container}:/etc/nginx/conf.d/${KILIC_CONF_D_BASENAME}"
+  echo "  + conf.d/${KILIC_CONF_D_BASENAME}"
+  return 0
 }
 
 reload_nginx_if_valid() {
@@ -111,28 +98,48 @@ reload_nginx_if_valid() {
   return 1
 }
 
+# Sertifika hem host'ta hem container mount'unda olmalı
+certs_ready_for_https() {
+  local host_cert="/etc/letsencrypt/live/kiliccoffeeroaster.com.tr/fullchain.pem"
+  local host_key="/etc/letsencrypt/live/kiliccoffeeroaster.com.tr/privkey.pem"
+  local container="${1:-ttengamesstudio-nginx}"
+
+  [[ -f "${host_cert}" && -f "${host_key}" ]] || return 1
+
+  if docker ps --format '{{.Names}}' | grep -qx "${container}"; then
+    docker exec "${container}" test -f /etc/letsencrypt/live/kiliccoffeeroaster.com.tr/fullchain.pem \
+      && docker exec "${container}" test -f /etc/letsencrypt/live/kiliccoffeeroaster.com.tr/privkey.pem
+  else
+    return 1
+  fi
+}
+
 apply_kilic_nginx_config() {
   local container="${1:?nginx container adı gerekli}"
   local tpl_host="${KILIC_CONF_HOST:-}"
 
   echo "==> Nginx container bekleniyor..."
-  if ! wait_for_nginx_running "${container}" 60; then
-    if [[ -n "${tpl_host}" && -f "${tpl_host}" ]]; then
-      recover_nginx_from_restart_loop "${container}" "${tpl_host}"
-    else
-      return 1
-    fi
-  fi
+  wait_for_nginx_running "${container}" 60 || return 1
 
-  install_kilic_conf_d "${container}" "${tpl_host}"
+  install_kilic_conf_d "${container}" "${tpl_host}" || return 1
 
   if reload_nginx_if_valid "${container}"; then
     return 0
   fi
 
-  echo "UYARI: nginx -t başarısız — container yeniden başlatılıyor..."
+  echo "UYARI: nginx -t başarısız — kiliccoffee conf geri alınıyor (diğer siteler korunsun)..."
+  docker exec "${container}" nginx -t 2>&1 || true
+  remove_kilic_conf "${container}" "${tpl_host}"
+
+  if reload_nginx_if_valid "${container}"; then
+    echo "  OK  rollback sonrası nginx sağlıklı (coffee conf yok)."
+    return 1
+  fi
+
+  # Hâlâ bozuksa restart + conf yok
   docker restart "${container}" >/dev/null
   wait_for_nginx_running "${container}" 90
-  install_kilic_conf_d "${container}" "${tpl_host}"
+  remove_kilic_conf "${container}" "${tpl_host}"
   reload_nginx_if_valid "${container}"
+  return 1
 }

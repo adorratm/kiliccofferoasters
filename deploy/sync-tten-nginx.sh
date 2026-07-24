@@ -21,11 +21,17 @@ fi
 KILIC_CONTAINERS=(kiliccoffee-prod-frontend kiliccoffee-prod-admin kiliccoffee-prod-api)
 
 if [[ -z "${SSL_MODE}" ]]; then
-  if [[ -f /etc/letsencrypt/live/kiliccoffeeroaster.com.tr/fullchain.pem ]]; then
+  if certs_ready_for_https "${NGINX_CONTAINER}"; then
     SSL_MODE=https
   else
     SSL_MODE=http
   fi
+fi
+
+if [[ "${SSL_MODE}" == "https" ]] && ! certs_ready_for_https "${NGINX_CONTAINER}"; then
+  echo "UYARI: HTTPS istendi ama sertifika yok/eksik — HTTP moda düşülüyor."
+  echo "  Host: ls /etc/letsencrypt/live/kiliccoffeeroaster.com.tr/"
+  SSL_MODE=http
 fi
 
 verify_tten_frontend_dns() {
@@ -120,13 +126,16 @@ ensure_kilic_on_tten_network || exit 0
 verify_tten_frontend_dns || exit 1
 
 echo "==> Nginx kiliccoffee conf.d..."
-apply_kilic_nginx_config "${NGINX_CONTAINER}"
+if ! apply_kilic_nginx_config "${NGINX_CONTAINER}"; then
+  echo "UYARI: Coffee conf uygulanamadı / geri alındı — TTEN+portfolio korunmalı."
+  echo "  Kurtarma: bash deploy/recover-nginx.sh"
+  echo "  Sertifika sonrası: bash deploy/sync-tten-nginx.sh https"
+  exit 0
+fi
 
 echo "==> Nginx → kiliccoffee upstream testi..."
 if ! wait_for_nginx_upstream; then
-  echo "  HATA: nginx container'ından frontend erişilemedi."
-  docker logs kiliccoffee-prod-frontend --tail 20 2>&1 || true
-  exit 1
+  echo "  UYARI: coffee frontend upstream yok (container kapalı olabilir) — conf yerinde."
 fi
 
 echo "==> Host header smoke testi..."
