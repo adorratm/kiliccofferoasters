@@ -1,4 +1,4 @@
-import { API_BASE } from "@/lib/api";
+import { getApiBase } from "@/lib/api";
 
 export type NavLink = { href: string; label: string };
 
@@ -150,7 +150,7 @@ function mergeSettings(
 
 export async function getSiteSettings(): Promise<SiteSettings> {
   try {
-    const res = await fetch(`${API_BASE}/cms/settings`, {
+    const res = await fetch(`${getApiBase()}/cms/settings`, {
       next: { revalidate: CMS_REVALIDATE },
     });
     if (!res.ok) return DEFAULT_SETTINGS;
@@ -166,7 +166,7 @@ export async function getContentSections(
 ): Promise<ContentSection[]> {
   try {
     const res = await fetch(
-      `${API_BASE}/cms/sections?page=${encodeURIComponent(page)}`,
+      `${getApiBase()}/cms/sections?page=${encodeURIComponent(page)}`,
       { next: { revalidate: CMS_REVALIDATE } },
     );
     if (!res.ok) return [];

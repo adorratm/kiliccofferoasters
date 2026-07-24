@@ -13,6 +13,9 @@ Bu stack `ttengamesstudio.com.tr` ve `emrekilic.web.tr` ile aynı VPS'te çalı�
 | Redis | **6381** | Portfolio 6380 dışında |
 | Edge | 80/443 | `ttengamesstudio-nginx` (paylaşımlı) |
 
+Frontend SSR, Docker ağında `API_INTERNAL_URL=http://api:4000` kullanır
+(`NEXT_PUBLIC_API_URL` tarayıcı içindir; container içinden Cloudflare’e çıkmak ürün 404’üne yol açabilir).
+
 ## İlk kurulum (sunucu)
 
 ```bash

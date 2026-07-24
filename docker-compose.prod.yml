@@ -102,6 +102,8 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
+      # SSR: container içinden public API URL'ine (Cloudflare) çıkmak 404/timeout yapar
+      API_INTERNAL_URL: http://api:4000
     ports:
       - "${FRONTEND_HOST_PORT:-3200}:3000"
     networks:
@@ -124,6 +126,7 @@ services:
       NODE_ENV: production
       PORT: 3001
       HOSTNAME: 0.0.0.0
+      API_INTERNAL_URL: http://api:4000
     ports:
       - "${ADMIN_HOST_PORT:-3201}:3001"
     networks:

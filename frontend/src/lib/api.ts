@@ -26,8 +26,20 @@ import type {
   WishlistItem,
 } from "@/lib/types";
 
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+export function getApiBase(): string {
+  // SSR (Docker): aynı network'teki API — public URL hairpin/Cloudflare yüzünden düşebilir
+  if (typeof window === "undefined") {
+    return (
+      process.env.API_INTERNAL_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "http://localhost:4000"
+    );
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+}
+
+/** Browser ve SSR için API kökü. SSR'da mümkünse API_INTERNAL_URL kullanılır. */
+export const API_BASE = getApiBase();
 
 export class ApiError extends Error {
   status: number;
@@ -61,7 +73,7 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
     headers.set("X-Session-Id", sessionId);
   }
 
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${getApiBase()}${path}`, {
       ...rest,
       headers,
       body: json !== undefined ? JSON.stringify(json) : rest.body,
@@ -378,7 +390,10 @@ export async function deleteAddress(token: string, id: string) {
 }
 
 export function oauthUrl(provider: "google") {
-  return `${API_BASE}/auth/${provider}`;
+  // Tarayıcı yönlendirmesi — her zaman public API URL
+  const publicBase =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  return `${publicBase}/auth/${provider}`;
 }
 
 export async function getShippingProviders(): Promise<ShippingProvider[]> {
