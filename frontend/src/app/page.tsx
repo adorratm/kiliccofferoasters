@@ -59,8 +59,8 @@ type NewsletterContent = {
 const FALLBACK_HERO: HeroContent = {
   imageUrl:
     "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=2000&q=80",
-  eyebrow: "EST. 2024 / TORBALI · İZMİR",
-  titleLine1: "Kılıç",
+  eyebrow: "EST. 2026 / TORBALI · İZMİR",
+  titleLine1: "Kılıç Coffee",
   titleLine2: "Roaster",
   description:
     "Engineered Precision. Artisanal Depth. Seçkin profesyoneller için yüksek teknolojili kavrum.",
@@ -306,18 +306,24 @@ export default async function HomePage() {
               {workshop.description}
             </p>
             <div className="space-y-6 font-meta text-sm uppercase">
-              <div className="flex flex-col justify-between gap-2 border-b border-outline-variant/20 pb-4 md:flex-row">
-                <span className="text-secondary/60">Adres</span>
-                <span className="max-w-md text-right md:text-left">{contact.address}</span>
-              </div>
-              <div className="flex justify-between border-b border-outline-variant/20 pb-4">
-                <span className="text-secondary/60">Konum</span>
-                <span className="text-primary">{contact.locationLabel}</span>
-              </div>
-              <div className="flex justify-between border-b border-outline-variant/20 pb-4">
-                <span className="text-secondary/60">Çalışma</span>
-                <span>{contact.hours}</span>
-              </div>
+              {contact.address ? (
+                <div className="flex flex-col justify-between gap-2 border-b border-outline-variant/20 pb-4 md:flex-row">
+                  <span className="text-secondary/60">Adres</span>
+                  <span className="max-w-md text-right md:text-left">{contact.address}</span>
+                </div>
+              ) : null}
+              {contact.locationLabel ? (
+                <div className="flex justify-between border-b border-outline-variant/20 pb-4">
+                  <span className="text-secondary/60">Konum</span>
+                  <span className="text-primary">{contact.locationLabel}</span>
+                </div>
+              ) : null}
+              {contact.hours ? (
+                <div className="flex justify-between border-b border-outline-variant/20 pb-4">
+                  <span className="text-secondary/60">Çalışma</span>
+                  <span>{contact.hours}</span>
+                </div>
+              ) : null}
             </div>
             <div className="mt-12">
               <Link

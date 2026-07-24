@@ -9,6 +9,7 @@ const SELLER = {
     "AYRANCILAR MAHALLESİ DEĞİRMEN CAD. NO:55A AYRANCILAR, 35870 Torbalı/İzmir",
   email: "info@kiliccoffeeroaster.com.tr",
   phone: "+90 541 214 79 63",
+  hours: "Pzt — Paz / 09:00 — 22:00",
   website: "https://kiliccoffeeroaster.com.tr",
   taxOffice: "Torbalı Vergi Dairesi",
   taxNumber: "",
@@ -186,7 +187,7 @@ ${SELLER.email} · ${SELLER.phone}`,
 2. Destek kanalları
 E-posta: ${SELLER.email}
 Telefon: ${SELLER.phone}
-Çalışma saatleri: Pzt — Cmt / 08:00 — 18:00 (resmi tatiller hariç)
+Çalışma saatleri: ${SELLER.hours}
 
 3. Şikayet süreci
 1) Talebinizi sipariş numaranızla iletin

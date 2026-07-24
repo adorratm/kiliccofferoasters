@@ -2,6 +2,7 @@ import { Reveal } from "@/components/Reveal";
 import { getLegalDocument } from "@/lib/api";
 import { getSiteSettings } from "@/lib/cms";
 import {
+  applyLiveSellerContact,
   buildLegalFallback,
   sellerFromSettings,
 } from "@/lib/legal-content";
@@ -16,7 +17,8 @@ export async function LegalPage({ slug }: Props) {
     getSiteSettings(),
   ]);
 
-  const fallbackMap = buildLegalFallback(sellerFromSettings(settings));
+  const seller = sellerFromSettings(settings);
+  const fallbackMap = buildLegalFallback(seller);
   const fallback = fallbackMap[slug] ?? {
     title: slug,
     content: "Bu yasal metin yakında yayınlanacaktır.",
@@ -26,7 +28,8 @@ export async function LegalPage({ slug }: Props) {
   const apiContent = doc?.content?.trim() || "";
   const isPlaceholder =
     !apiContent || apiContent.includes("örnek içerik");
-  const content = isPlaceholder ? fallback.content : apiContent;
+  const rawContent = isPlaceholder ? fallback.content : apiContent;
+  const content = applyLiveSellerContact(rawContent, seller);
 
   return (
     <article className="page-shell mx-auto max-w-3xl py-16 md:py-24">

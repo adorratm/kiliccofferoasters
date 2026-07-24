@@ -7,7 +7,7 @@ export const DEFAULT_SITE_SETTINGS: Record<
     slogan: 'Engineered Precision. Artisanal Depth.',
     tagline:
       'Engineered Precision. Artisanal Depth. Seçkin profesyoneller için yüksek teknolojili kavrum.',
-    established: 'EST. 2024',
+    established: 'EST. 2026',
     location: 'Torbalı · İzmir',
   },
   contact: {
@@ -15,7 +15,7 @@ export const DEFAULT_SITE_SETTINGS: Record<
       'AYRANCILAR MAHALLESİ DEĞİRMEN CAD. NO:55A AYRANCILAR, 35870 Torbalı/İzmir',
     email: 'info@kiliccoffeeroaster.com.tr',
     phone: '+90 541 214 79 63',
-    hours: 'Pzt — Cmt / 08:00 — 18:00',
+    hours: 'Pzt — Paz / 09:00 — 22:00',
     locationLabel: 'Torbalı / İzmir',
   },
   seo: {
@@ -83,8 +83,8 @@ export const DEFAULT_HOME_SECTIONS = [
     content: {
       imageUrl:
         'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=2000&q=80',
-      eyebrow: 'EST. 2024 / TORBALI · İZMİR',
-      titleLine1: 'Kılıç',
+      eyebrow: 'EST. 2026 / TORBALI · İZMİR',
+      titleLine1: 'Kılıç Coffee',
       titleLine2: 'Roaster',
       description:
         'Engineered Precision. Artisanal Depth. Seçkin profesyoneller için yüksek teknolojili kavrum.',

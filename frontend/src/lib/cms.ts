@@ -63,7 +63,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
       "AYRANCILAR MAHALLESİ DEĞİRMEN CAD. NO:55A AYRANCILAR, 35870 Torbalı/İzmir",
     email: "info@kiliccoffeeroaster.com.tr",
     phone: "+90 541 214 79 63",
-    hours: "Pzt — Cmt / 08:00 — 18:00",
+    hours: "Pzt — Paz / 09:00 — 22:00",
     locationLabel: "Torbalı / İzmir",
   },
   seo: {
@@ -122,7 +122,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   },
 };
 
-const CMS_REVALIDATE = 300;
+const CMS_REVALIDATE = 60;
 
 function mergeSettings(
   raw: Record<string, Record<string, unknown>> | null,

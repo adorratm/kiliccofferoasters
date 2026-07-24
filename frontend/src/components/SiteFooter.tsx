@@ -39,6 +39,11 @@ export function SiteFooter({ settings = DEFAULT_SETTINGS }: Props) {
                 </a>
               </p>
             ) : null}
+            {contact.hours ? (
+              <p className="mt-1 font-meta text-[11px] uppercase text-secondary">
+                {contact.hours}
+              </p>
+            ) : null}
           </div>
           <p className="mt-12 font-meta text-xs uppercase text-secondary">
             © {new Date().getFullYear()} {brand.name}. {footer.copyrightSuffix}

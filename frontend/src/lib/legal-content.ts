@@ -18,6 +18,16 @@ export type LegalSeller = {
   mersis: string;
 };
 
+/** Seed / eski yasal metinlerde gömülü statik iletişim (API DB içeriği). */
+const SEEDED_CONTACT = {
+  name: DEFAULT_SETTINGS.brand.name,
+  address: DEFAULT_SETTINGS.contact.address,
+  email: DEFAULT_SETTINGS.contact.email,
+  phone: DEFAULT_SETTINGS.contact.phone,
+  hours: DEFAULT_SETTINGS.contact.hours,
+  website: "https://kiliccoffeeroaster.com.tr",
+} as const;
+
 export function sellerFromSettings(settings: SiteSettings): LegalSeller {
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL || "https://kiliccoffeeroaster.com.tr"
@@ -33,6 +43,56 @@ export function sellerFromSettings(settings: SiteSettings): LegalSeller {
     taxNumber: "",
     mersis: "[MERSİS No — güncellenecek]",
   };
+}
+
+/**
+ * DB'deki yasal metinlere seed sırasında gömülen iletişim bilgilerini
+ * güncel Site Ayarları (panel) değerleriyle değiştirir.
+ */
+export function applyLiveSellerContact(
+  content: string,
+  seller: LegalSeller,
+): string {
+  let result = content;
+
+  const placeholders: Record<string, string> = {
+    "{{seller.name}}": seller.name,
+    "{{seller.address}}": seller.address,
+    "{{seller.email}}": seller.email,
+    "{{seller.phone}}": seller.phone,
+    "{{seller.hours}}": seller.hours,
+    "{{seller.website}}": seller.website,
+    "{{contact.hours}}": seller.hours,
+    "{{contact.address}}": seller.address,
+    "{{contact.email}}": seller.email,
+    "{{contact.phone}}": seller.phone,
+  };
+  for (const [token, value] of Object.entries(placeholders)) {
+    if (value) result = result.replaceAll(token, value);
+  }
+
+  const seededPairs: [string, string][] = [
+    [SEEDED_CONTACT.address, seller.address],
+    [SEEDED_CONTACT.email, seller.email],
+    [SEEDED_CONTACT.phone, seller.phone],
+    [SEEDED_CONTACT.hours, seller.hours],
+    [SEEDED_CONTACT.website, seller.website],
+    [SEEDED_CONTACT.name, seller.name],
+  ];
+  for (const [from, to] of seededPairs) {
+    if (from && to && from !== to) {
+      result = result.replaceAll(from, to);
+    }
+  }
+
+  if (seller.hours) {
+    result = result.replace(
+      /Çalışma saatleri:\s*[^\n]+/g,
+      `Çalışma saatleri: ${seller.hours}`,
+    );
+  }
+
+  return result;
 }
 
 export function buildLegalFallback(
