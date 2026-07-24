@@ -9,11 +9,9 @@ import type { Product, ProductVariant } from "@/lib/types";
 
 type Props = {
   product: Product;
-  /** API erişilemezken DEMO ürünler — sepete ekleme kapalı */
-  demoMode?: boolean;
 };
 
-export function ProductBuyBox({ product, demoMode = false }: Props) {
+export function ProductBuyBox({ product }: Props) {
   const variants = useMemo(
     () => (product.variants || []).filter((v) => v.isActive !== false),
     [product.variants],
@@ -32,7 +30,7 @@ export function ProductBuyBox({ product, demoMode = false }: Props) {
       ?.compareAtPrice ?? product.compareAtPrice;
   const stock = selected != null ? selected.stock : product.stock;
   const outOfStock = stock <= 0;
-  const disabled = demoMode || outOfStock;
+  const disabled = outOfStock;
 
   return (
     <div className="space-y-6">
@@ -121,12 +119,6 @@ export function ProductBuyBox({ product, demoMode = false }: Props) {
         ) : null}
       </div>
 
-      {demoMode ? (
-        <p className="font-meta text-[10px] uppercase text-error">
-          Demo ürün — API bağlantısı olmadan sepete eklenemez
-        </p>
-      ) : null}
-
       <div className="flex items-stretch gap-3">
         <div className="flex-1">
           <AddToCartButton
@@ -136,13 +128,7 @@ export function ProductBuyBox({ product, demoMode = false }: Props) {
             disabled={disabled}
             productName={product.name}
             price={Number(displayPrice)}
-            label={
-              demoMode
-                ? "Demo mod"
-                : outOfStock
-                  ? "Stokta yok"
-                  : "Satın Almayı Başlat"
-            }
+            label={outOfStock ? "Stokta yok" : "Satın Almayı Başlat"}
           />
         </div>
         <FavoriteButton productId={product.id} size="lg" />

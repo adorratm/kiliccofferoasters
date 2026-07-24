@@ -13,7 +13,6 @@ type Props = {
 /** Ürün detay ViewContent — client-only bir kez */
 export function ProductViewTracker({ id, name, price, currency }: Props) {
   useEffect(() => {
-    if (id.startsWith("demo-")) return;
     trackViewContent({ id, name, price, currency });
   }, [id, name, price, currency]);
 

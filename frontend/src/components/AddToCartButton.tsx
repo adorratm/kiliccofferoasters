@@ -31,10 +31,8 @@ export function AddToCartButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isDemoId = productId.startsWith("demo-");
-
   async function onClick() {
-    if (disabled || isDemoId) return;
+    if (disabled) return;
     setLoading(true);
     setError(null);
     try {
@@ -66,7 +64,7 @@ export function AddToCartButton({
     <div>
       <button
         type="button"
-        disabled={loading || disabled || isDemoId}
+        disabled={loading || disabled}
         onClick={onClick}
         className={
           className ||

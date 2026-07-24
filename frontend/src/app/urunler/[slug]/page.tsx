@@ -7,7 +7,6 @@ import { ProductViewTracker } from "@/components/ProductViewTracker";
 import { Reveal } from "@/components/Reveal";
 import { getProductBySlug } from "@/lib/api";
 import { getSiteSettings } from "@/lib/cms";
-import { DEMO_PRODUCTS } from "@/lib/demo-products";
 import { productImage } from "@/lib/format";
 import {
   JsonLd,
@@ -34,9 +33,7 @@ function hasText(value: unknown): value is string {
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const [product, settings] = await Promise.all([
-    getProductBySlug(slug).then(
-      (p) => p || DEMO_PRODUCTS.find((item) => item.slug === slug) || null,
-    ),
+    getProductBySlug(slug),
     getSiteSettings(),
   ]);
   if (!product) return { title: "Ürün" };
@@ -46,15 +43,11 @@ export async function generateMetadata({ params }: Props) {
 export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params;
   const [product, settings] = await Promise.all([
-    getProductBySlug(slug).then(
-      (p) => p || DEMO_PRODUCTS.find((item) => item.slug === slug) || null,
-    ),
+    getProductBySlug(slug),
     getSiteSettings(),
   ]);
 
   if (!product) notFound();
-
-  const isDemo = product.id.startsWith("demo-");
 
   const images =
     product.gallery?.length > 0
@@ -146,7 +139,6 @@ export default async function ProductDetailPage({ params }: Props) {
                 </div>
                 <p className="font-meta text-xs uppercase text-on-surface-variant">
                   Ağırlık · öğütme · stok
-                  {isDemo ? " · demo" : ""}
                 </p>
                 {(product.ratingCount ?? 0) > 0 ? (
                   <p className="mt-2 font-meta text-xs uppercase tracking-widest text-primary">
@@ -183,7 +175,7 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
 
           <div>
-            <ProductBuyBox product={product} demoMode={isDemo} />
+            <ProductBuyBox product={product} />
             <div className="mt-4 flex justify-between font-meta text-[10px] uppercase tracking-widest text-on-surface-variant">
               <span>Secure_Protocol_V3</span>
               <span>Global_Logistics_Enabled</span>

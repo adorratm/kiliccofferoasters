@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/ProductCard";
 import { Reveal } from "@/components/Reveal";
 import { getCategories, getProductsPaged } from "@/lib/api";
-import { resolveProducts } from "@/lib/demo-products";
 import type { Category, Paginated, Product } from "@/lib/types";
 
 type SortKey = "name" | "price" | "createdAt" | "stock";
@@ -48,7 +47,7 @@ export default function ProductsCatalog() {
   useEffect(() => {
     void getProductsPaged({ limit: 50, sort: "name", order: "asc" }).then(
       (data) => {
-        const items = resolveProducts(data.items);
+        const items = data.items;
         setOrigins(
           Array.from(
             new Set(
@@ -82,25 +81,7 @@ export default function ProductsCatalog() {
       limit: 12,
     }).then(async (data) => {
       if (cancelled) return;
-      // Filtreliyken boş API sonucunu demo ürünlerle doldurma —
-      // yoksa "bulunamadı + öneri" durumu hiç görünmez.
-      const items = hasActiveFilters
-        ? data.items
-        : resolveProducts(data.items);
-      setPaged({
-        ...data,
-        items,
-        total: hasActiveFilters
-          ? data.total
-          : data.items.length
-            ? data.total
-            : items.length,
-        totalPages: hasActiveFilters
-          ? data.totalPages
-          : data.items.length
-            ? data.totalPages
-            : 1,
-      });
+      setPaged(data);
 
       if (!data.items.length && hasActiveFilters) {
         const featured = await getProductsPaged({
@@ -119,7 +100,6 @@ export default function ProductsCatalog() {
           });
           suggested = fallback.items;
         }
-        // Demo ürün kullanma — API gerçekten boşsa öneri gösterme
         if (!cancelled) setSuggestions(suggested.slice(0, 6));
       }
 

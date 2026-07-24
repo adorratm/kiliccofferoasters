@@ -10,7 +10,6 @@ import {
   getSiteSettings,
   sectionContent,
 } from "@/lib/cms";
-import { resolveProducts } from "@/lib/demo-products";
 
 type HeroContent = {
   imageUrl: string;
@@ -126,7 +125,11 @@ export default async function HomePage() {
     description: "Drop uyarıları ve teknik loglar için ağa katılın",
   } satisfies NewsletterContent);
 
-  const featured = resolveProducts(apiProducts, true).slice(0, 3);
+  const featuredPool = apiProducts.filter((p) => p.isFeatured);
+  const featured = (featuredPool.length ? featuredPool : apiProducts).slice(
+    0,
+    3,
+  );
   const { contact } = settings;
 
   return (
