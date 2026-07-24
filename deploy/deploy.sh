@@ -135,8 +135,8 @@ wait_for_health "${API_PORT}" "/health" 40
 
 if docker network inspect "${KILIC_TTEN_NETWORK:-ttengamesstudio_ttengamesstudio-network}" >/dev/null 2>&1; then
   bash "${ROOT_DIR}/deploy/sync-tten-nginx.sh" || {
-    echo "Nginx sync başarısız — manuel: bash deploy/sync-tten-nginx.sh"
-    exit 1
+    echo "UYARI: Nginx sync coffee conf uygulayamadı — diğer siteler için:"
+    echo "  bash deploy/recover-nginx.sh"
   }
 else
   echo "UYARI: TTEN ağı yok — nginx sync atlandı."

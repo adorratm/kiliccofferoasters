@@ -83,20 +83,21 @@ bash deploy/sync-tten-nginx.sh https
 bash deploy/migrate-local-to-prod.sh export|import
 ```
 
-## Host nginx 404 (acil)
+## Acil kurtarma (tüm siteler 404 / nginx -t fail)
 
-Yanıt `Server: nginx/1.24.0 (Ubuntu)` ise Ubuntu host nginx 80/443’ü kapmıştır.
-Edge her zaman Docker `ttengamesstudio-nginx` olmalı:
+Bozuk `kiliccoffee.conf` (genelde eksik SSL cert) Docker nginx’i düşürebilir:
 
 ```bash
-sudo systemctl stop nginx
-sudo systemctl disable nginx
+sudo bash /opt/kiliccofferoaster/deploy/recover-nginx.sh
+# veya script yoksa:
+sudo systemctl stop nginx && sudo systemctl disable nginx
+sudo rm -f /opt/ttengamesstudio/docker/nginx/templates/kiliccoffee.conf
+docker exec ttengamesstudio-nginx rm -f /etc/nginx/conf.d/kiliccoffee.conf
 docker start ttengamesstudio-nginx
-# veya: cd /opt/ttengamesstudio && docker compose up -d
-
-curl -sI -H 'Host: ttengamesstudio.com.tr' http://127.0.0.1/ | head -5
-curl -sI -H 'Host: emrekilic.web.tr' http://127.0.0.1/tr | head -5
-
+docker exec ttengamesstudio-nginx nginx -t && docker exec ttengamesstudio-nginx nginx -s reload
 cd /opt/portfolio && bash deploy/sync-tten-nginx.sh
-cd /opt/kiliccofferoaster && bash deploy/sync-tten-nginx.sh
 ```
+
+HTTPS coffee conf **yalnızca** sertifika varken:
+`ls /etc/letsencrypt/live/kiliccoffeeroaster.com.tr/`
+Yoksa: `bash deploy/sync-tten-nginx.sh http`
