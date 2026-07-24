@@ -54,6 +54,29 @@ wait_for_health() {
   return 1
 }
 
+ensure_swap() {
+  local swap_mb
+  swap_mb="$(free -m | awk '/Swap:/{print $2}')"
+  if [[ "${swap_mb}" -ge 1024 ]]; then
+    echo "Swap OK (${swap_mb}M)."
+    return 0
+  fi
+  if [[ -f /swapfile ]]; then
+    swapon /swapfile 2>/dev/null || true
+    return 0
+  fi
+  if [[ "${EUID}" -ne 0 ]]; then
+    echo "UYARI: Swap yok ve root değil — OOM riski yüksek."
+    return 0
+  fi
+  echo "==> Swap yok — 2G /swapfile oluşturuluyor (OOM önleme)..."
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+}
+
 cd "${ROOT_DIR}"
 
 echo "==> Kılıç Coffee production deploy: $(date -Is)"
@@ -61,6 +84,9 @@ echo "==> Kılıç Coffee production deploy: $(date -Is)"
 export COMPOSE_PARALLEL_LIMIT=1
 export DOCKER_BUILDKIT=1
 export BUILDKIT_STEP_LOG_MAX_SIZE=10485760
+export BUILDKIT_STEP_LOG_MAX_SPEED=10485760
+
+ensure_swap
 
 POSTGRES_USER="$(grep '^POSTGRES_USER=' "${ENV_FILE}" | cut -d= -f2)"
 POSTGRES_USER="${POSTGRES_USER:-kilic}"
@@ -75,7 +101,10 @@ echo "==> Redis..."
 echo "==> Servisler sırayla build (RAM dostu)..."
 for service in api frontend admin; do
   echo "--- build: ${service} ($(date -Is))"
+  echo "    free: $(free -m | awk '/Mem:/{print $7}')M available"
   "${COMPOSE[@]}" build "${service}"
+  # Ara cache temizliği — sonraki build için RAM/disk
+  docker builder prune -f --keep-storage 2GB >/dev/null 2>&1 || true
 done
 
 echo "==> Uygulama container'ları..."

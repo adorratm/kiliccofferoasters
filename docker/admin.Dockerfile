@@ -3,6 +3,10 @@ WORKDIR /app
 RUN corepack enable
 
 FROM base AS build
+ENV NODE_OPTIONS=--max-old-space-size=1536
+ENV YARN_NETWORK_CONCURRENCY=2
+ENV YARN_ENABLE_GLOBAL_CACHE=false
+
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY admin ./admin
 COPY api/package.json ./api/
@@ -15,7 +19,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_ADMIN_URL=$NEXT_PUBLIC_ADMIN_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_CDN_URL=$NEXT_PUBLIC_CDN_URL
-RUN yarn install --immutable
+RUN yarn workspaces focus @kilic/admin
 WORKDIR /app/admin
 RUN yarn build
 

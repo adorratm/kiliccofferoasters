@@ -3,11 +3,15 @@ WORKDIR /app
 RUN corepack enable
 
 FROM base AS build
+ENV NODE_OPTIONS=--max-old-space-size=1536
+ENV YARN_NETWORK_CONCURRENCY=2
+ENV YARN_ENABLE_GLOBAL_CACHE=false
+
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY api ./api
 COPY frontend/package.json ./frontend/
 COPY admin/package.json ./admin/
-RUN yarn install --immutable
+RUN yarn workspaces focus @kilic/api
 WORKDIR /app/api
 RUN yarn build
 
